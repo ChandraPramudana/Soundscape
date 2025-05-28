@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- State when item is selected -->
+    <item android:state_selected="true">
+        <shape>
+            <solid android:color="#E3F2FD" />
+            <corners android:radius="8dp" />
+        </shape>
+    </item>
+
+    <!-- State when item is pressed/touched -->
+    <item android:state_pressed="true">
+        <shape>
+            <solid android:color="#F5F5F5" />
+            <corners android:radius="8dp" />
+        </shape>
+    </item>
+
+    <!-- State when item is focused -->
+    <item android:state_focused="true">
+        <shape>
+            <solid android:color="#EEEEEE" />
+            <corners android:radius="8dp" />
+        </shape>
+    </item>
+
+    <!-- Default state -->
+    <item>
+        <shape>
+            <solid android:color="@android:color/transparent" />
+            <corners android:radius="8dp" />
+        </shape>
+    </item>
+</selector>

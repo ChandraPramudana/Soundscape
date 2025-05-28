@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "135828023696",
+    "project_id": "soundscape-e81f3",
+    "storage_bucket": "soundscape-e81f3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:135828023696:android:d90c65cf225de9db7dab15",
+        "android_client_info": {
+          "package_name": "com.chandra.soundscape"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyABNUeGOIR_8S6cnmGjwoxZeXXjpOXWyYA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
