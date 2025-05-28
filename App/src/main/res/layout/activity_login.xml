@@ -116,46 +116,18 @@
                 <ImageView
                     android:layout_width="24dp"
                     android:layout_height="24dp"
-                    android:src="@drawable/ic_role"
+                    android:src="@drawable/ic_person"
                     android:tint="@color/white"
-                    android:layout_marginEnd="12dp"/>
+                    android:layout_marginEnd="12dp" />
 
-                <RelativeLayout
+                <Spinner
+                    android:id="@+id/role_spinner"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content">
-
-                    <TextView
-                        android:id="@+id/role_hint"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Select your role"
-                        android:textColor="#CCFFFFFF"
-                        android:textSize="16sp"
-                        android:visibility="visible" />
-
-                    <Spinner
-                        android:id="@+id/role_spinner"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:background="@null"
-                        android:layout_alignParentStart="true"
-                        android:layout_alignParentEnd="true"
-                        android:dropDownWidth="match_parent"
-                        android:popupBackground="@drawable/spinner_popup_background"
-                        android:spinnerMode="dropdown"
-                        android:theme="@style/SpinnerTheme" />
-
-                    <ImageView
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:layout_alignParentEnd="true"
-                        android:layout_centerVertical="true"
-                        android:src="@drawable/ic_arrow_drop_down"
-                        android:tint="@color/white" />
-                </RelativeLayout>
+                    android:layout_height="wrap_content"
+                    android:backgroundTint="@color/white"
+                    android:popupBackground="@drawable/spinner_popup_background"
+                    android:spinnerMode="dropdown" />
             </LinearLayout>
-
-
 
             <!-- Login Button -->
             <androidx.cardview.widget.CardView

@@ -35,7 +35,7 @@ public class RegisterActivity extends AppCompatActivity {
         loginLink = findViewById(R.id.login_link);
 
         // Spinner Role
-        String[] roles = {"Admin", "User", "Guest"};
+        String[] roles = {"Admin", "User", "Dokter"};
         ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, roles);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         roleSpinner.setAdapter(adapter);

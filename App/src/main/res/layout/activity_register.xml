@@ -180,7 +180,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:backgroundTint="@color/white"
-                    android:popupBackground="@color/background_light"
+                    android:popupBackground="@drawable/spinner_popup_background"
                     android:spinnerMode="dropdown" />
             </LinearLayout>
 
