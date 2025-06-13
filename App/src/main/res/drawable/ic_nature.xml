@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+    <!-- Tree trunk -->
+    <rect x="11" y="16" width="2" height="6" fill="#8B4513"/>
+
+    <!-- Tree foliage layers -->
+    <circle cx="12" cy="14" r="4" fill="#228B22"/>
+    <circle cx="12" cy="12" r="3.5" fill="#32CD32"/>
+    <circle cx="12" cy="10" r="3" fill="#90EE90"/>
+
+    <!-- Leaves falling -->
+    <path d="M6 8c0-1 1-2 2-1.5s1 1.5 0 2.5-2 0-2-1z" fill="#FFD700"/>
+    <path d="M18 12c0-1 1-2 2-1.5s1 1.5 0 2.5-2 0-2-1z" fill="#FF6B6B"/>
+    <path d="M4 16c0-0.5 0.5-1 1-0.75s0.5 0.75 0 1.25-1 0-1-0.5z" fill="#FFA500"/>
+
+    <!-- Ground -->
+    <path d="M2 21h20c0-1-2-1-4-1s-4 0-6 0-4 0-6 0-4 0-4 1z" fill="#8FBC8F"/>
+</svg>

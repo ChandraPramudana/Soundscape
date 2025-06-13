@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval">
+
+    <!-- Gradient for depth and modern look -->
+    <gradient
+        android:type="radial"
+        android:gradientRadius="20dp"
+        android:startColor="#42A5F5"
+        android:centerColor="#2196F3"
+        android:endColor="#1976D2" />
+
+    <!-- Alternative: Simple solid color -->
+    <!-- <solid android:color="#2196F3" /> -->
+
+</shape>

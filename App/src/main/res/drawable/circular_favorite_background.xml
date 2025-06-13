@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Pressed state -->
+    <item android:state_pressed="true">
+        <shape android:shape="oval">
+            <solid android:color="#33000000" />
+        </shape>
+    </item>
+
+    <!-- Selected/Favorited state -->
+    <item android:state_selected="true">
+        <shape android:shape="oval">
+            <solid android:color="#4CAF50" />
+        </shape>
+    </item>
+
+    <!-- Normal state -->
+    <item>
+        <shape android:shape="oval">
+            <solid android:color="#4D000000" />
+        </shape>
+    </item>
+
+</selector>

@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="grid_spacing">8dp</dimen>
+    <!-- Anda bisa menambahkan dimensi lain yang diperlukan -->
+    <dimen name="grid_item_spacing">12dp</dimen>
+    <dimen name="margin_standard">16dp</dimen>
+
+    <dimen name="margin_small">8dp</dimen>
+    <dimen name="margin_large">24dp</dimen>
+    <dimen name="text_size_small">12sp</dimen>
+    <dimen name="text_size_medium">16sp</dimen>
+    <dimen name="text_size_large">20sp</dimen>
+    <dimen name="elevation_card">4dp</dimen>
+    <dimen name="corner_radius">12dp</dimen>
+
+    <!-- Navigation Drawer -->
+    <dimen name="nav_header_height">176dp</dimen>
+
+    <!-- Activity Margins -->
+    <dimen name="activity_horizontal_margin">16dp</dimen>
+    <dimen name="activity_vertical_margin">16dp</dimen>
+
+    <!-- Card Dimensions -->
+    <dimen name="card_corner_radius">12dp</dimen>
+    <dimen name="card_elevation">3dp</dimen>
+
+    <!-- Text Sizes -->
+    <dimen name="text_size_large1">20sp</dimen>
+    <dimen name="text_size_medium2">16sp</dimen>
+    <dimen name="text_size_small3">14sp</dimen>
+    <dimen name="text_size_caption">12sp</dimen>
+
+    <!-- Spacing -->
+    <dimen name="spacing_small">8dp</dimen>
+    <dimen name="spacing_medium">16dp</dimen>
+    <dimen name="spacing_large">24dp</dimen>
+
+    <!-- Icon Sizes -->
+    <dimen name="icon_size_small">16dp</dimen>
+    <dimen name="icon_size_medium">24dp</dimen>
+    <dimen name="icon_size_large">32dp</dimen>
+    <dimen name="icon_size_xlarge">40dp</dimen>
+
+</resources>

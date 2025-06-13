@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval">
+
+    <!-- Golden background for premium indicator -->
+    <solid android:color="#FFD700" />
+
+    <!-- Optional border for definition -->
+    <stroke
+        android:width="1dp"
+        android:color="#FFA000" />
+
+</shape>

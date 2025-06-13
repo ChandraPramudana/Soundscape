@@ -1,0 +1,16 @@
+<!-- side_nav_bar.xml -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+
+    <!-- Gradient Background -->
+    <gradient
+        android:startColor="#6200EA"
+        android:centerColor="#3700B3"
+        android:endColor="#03DAC6"
+        android:angle="135"
+        android:type="linear" />
+
+    <!-- Optional: Add subtle corners if needed -->
+    <corners android:radius="0dp" />
+
+</shape>
