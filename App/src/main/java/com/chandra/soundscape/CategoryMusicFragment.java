@@ -22,6 +22,8 @@ import com.chandra.soundscape.models.MusicTrack;
 import com.google.android.material.appbar.AppBarLayout;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 public class CategoryMusicFragment extends Fragment implements MusicTrackAdapter.OnMusicClickListener {
     private static final String TAG = "CategoryMusicFragment";
@@ -159,14 +161,28 @@ public class CategoryMusicFragment extends Fragment implements MusicTrackAdapter
                         try {
                             musicList.clear();
 
-                            // Filter music by category
+                            // Set untuk melacak kategori unik yang ada di database
+                            Set<String> uniqueCategories = new HashSet<>();
+
+                            // Filter music by category with flexible matching
                             if (allMusic != null) {
                                 for (MusicTrack track : allMusic) {
-                                    if (track.getCategory() != null &&
-                                            track.getCategory().equalsIgnoreCase(categoryName)) {
-                                        musicList.add(track);
+                                    if (track.getCategory() != null) {
+                                        // Tambahkan ke set kategori unik
+                                        uniqueCategories.add(track.getCategory());
+
+                                        // Check if categories match using flexible matching
+                                        if (isCategoryMatch(track.getCategory(), categoryName)) {
+                                            musicList.add(track);
+                                            Log.d(TAG, "Match found: '" + track.getCategory() +
+                                                    "' matches '" + categoryName + "'");
+                                        }
                                     }
                                 }
+
+                                // Log semua kategori unik yang ditemukan
+                                Log.d(TAG, "All unique categories in database: " + uniqueCategories);
+                                Log.d(TAG, "Looking for category: '" + categoryName + "'");
                             }
 
                             // Update UI
@@ -185,7 +201,8 @@ public class CategoryMusicFragment extends Fragment implements MusicTrackAdapter
                                 swipeRefresh.setRefreshing(false);
                             }
 
-                            Log.d(TAG, "Music loaded for category " + categoryName + ": " + musicList.size());
+                            Log.d(TAG, "Music loaded for category '" + categoryName + "': " +
+                                    musicList.size() + " tracks found");
 
                         } catch (Exception e) {
                             Log.e(TAG, "Error updating UI", e);
@@ -212,6 +229,88 @@ public class CategoryMusicFragment extends Fragment implements MusicTrackAdapter
                 }
             }
         });
+    }
+
+    /**
+     * Flexible category matching that handles different naming conventions
+     */
+    private boolean isCategoryMatch(String trackCategory, String targetCategory) {
+        if (trackCategory == null || targetCategory == null) {
+            return false;
+        }
+
+        // Exact match (case-insensitive)
+        if (trackCategory.equalsIgnoreCase(targetCategory)) {
+            return true;
+        }
+
+        // Normalize both categories
+        String normalizedTrack = normalizeCategory(trackCategory);
+        String normalizedTarget = normalizeCategory(targetCategory);
+
+        // Check normalized match
+        if (normalizedTrack.equalsIgnoreCase(normalizedTarget)) {
+            return true;
+        }
+
+        // Special case mappings for Deep Sleep
+        if ((targetCategory.equalsIgnoreCase("Deep Sleep") ||
+                normalizedTarget.equals("deepsleep")) &&
+                (trackCategory.equalsIgnoreCase("deepsleep") ||
+                        trackCategory.equalsIgnoreCase("deep sleep") ||
+                        trackCategory.equalsIgnoreCase("deep_sleep") ||
+                        trackCategory.equalsIgnoreCase("sleep") ||
+                        normalizedTrack.equals("deepsleep") ||
+                        normalizedTrack.equals("sleep"))) {
+            return true;
+        }
+
+        // Special case mappings for Stress Relief
+        if ((targetCategory.equalsIgnoreCase("Stress Relief") ||
+                normalizedTarget.equals("stressrelief")) &&
+                (trackCategory.equalsIgnoreCase("stressrelief") ||
+                        trackCategory.equalsIgnoreCase("stress relief") ||
+                        trackCategory.equalsIgnoreCase("stress_relief") ||
+                        trackCategory.equalsIgnoreCase("relax") ||
+                        trackCategory.equalsIgnoreCase("relaxation") ||
+                        normalizedTrack.equals("stressrelief") ||
+                        normalizedTrack.equals("relax"))) {
+            return true;
+        }
+
+        // Special case mappings for Mindfulness
+        if ((targetCategory.equalsIgnoreCase("Mindfulness") ||
+                normalizedTarget.equals("mindfulness")) &&
+                (trackCategory.equalsIgnoreCase("mindfulness") ||
+                        trackCategory.equalsIgnoreCase("mindful") ||
+                        trackCategory.equalsIgnoreCase("meditation") ||
+                        trackCategory.equalsIgnoreCase("focus") ||
+                        normalizedTrack.equals("mindfulness") ||
+                        normalizedTrack.equals("meditation"))) {
+            return true;
+        }
+
+        // Special case mappings for Therapeutic
+        if ((targetCategory.equalsIgnoreCase("Therapeutic") ||
+                normalizedTarget.equals("therapeutic")) &&
+                (trackCategory.equalsIgnoreCase("therapeutic") ||
+                        trackCategory.equalsIgnoreCase("therapy") ||
+                        trackCategory.equalsIgnoreCase("healing") ||
+                        trackCategory.equalsIgnoreCase("health") ||
+                        normalizedTrack.equals("therapeutic") ||
+                        normalizedTrack.equals("therapy"))) {
+            return true;
+        }
+
+        return false;
+    }
+
+    private String normalizeCategory(String category) {
+        return category.toLowerCase()
+                .replace(" ", "")
+                .replace("-", "")
+                .replace("_", "")
+                .trim();
     }
 
     private void updateSubtitle() {

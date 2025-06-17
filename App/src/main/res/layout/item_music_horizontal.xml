@@ -21,8 +21,8 @@
         <!-- Music Cover -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/cv_music_cover"
-            android:layout_width="80dp"
-            android:layout_height="80dp"
+            android:layout_width="65dp"
+            android:layout_height="65dp"
             app:cardCornerRadius="12dp"
             app:cardElevation="0dp"
             app:layout_constraintStart_toStartOf="parent"
@@ -44,10 +44,10 @@
                 <!-- Premium Badge -->
                 <ImageView
                     android:id="@+id/iv_premium_badge"
-                    android:layout_width="16dp"
-                    android:layout_height="16dp"
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
                     android:layout_gravity="top|end"
-                    android:layout_margin="6dp"
+                    android:layout_margin="4dp"
                     android:src="@drawable/ic_premium"
                     android:visibility="gone"
                     tools:visibility="visible" />
@@ -56,16 +56,51 @@
 
         </com.google.android.material.card.MaterialCardView>
 
+        <!-- Play Button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_play"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:padding="0dp"
+            app:cornerRadius="24dp"
+            app:icon="@drawable/ic_play_arrow"
+            app:iconGravity="textStart"
+            app:iconPadding="0dp"
+            app:iconSize="20dp"
+            app:iconTint="@color/white"
+            android:backgroundTint="@color/colorPrimary"
+            android:alpha="0.9"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent" />
+
+        <!-- Favorite Button -->
+        <ImageButton
+            android:id="@+id/ib_favorite"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_marginEnd="8dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:padding="4dp"
+            android:src="@drawable/ic_favorite_border"
+            app:tint="@color/icon_tint"
+            android:contentDescription="@string/favorite"
+            app:layout_constraintEnd_toStartOf="@+id/btn_play"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent" />
+
         <!-- Music Info Container -->
         <LinearLayout
             android:id="@+id/ll_music_info"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
-            android:layout_marginEnd="12dp"
+            android:layout_marginStart="10dp"
+            android:layout_marginEnd="8dp"
             android:orientation="vertical"
             app:layout_constraintStart_toEndOf="@+id/cv_music_cover"
-            app:layout_constraintEnd_toStartOf="@+id/ll_action_container"
+            app:layout_constraintEnd_toStartOf="@+id/ib_favorite"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent">
 
@@ -78,50 +113,28 @@
                 android:maxLines="1"
                 android:text="Music Title"
                 android:textColor="@color/black"
-                android:textSize="15sp"
+                android:textSize="13sp"
                 android:textStyle="bold"
                 tools:text="Deep Sleep Meditation" />
 
-            <!-- Artist -->
-            <TextView
-                android:id="@+id/tv_music_artist"
+            <!-- Artist with Doctor Icon (combined) -->
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:ellipsize="end"
-                android:maxLines="1"
-                android:text="Artist Name"
-                android:textColor="@color/text_secondary"
-                android:textSize="13sp"
-                tools:text="John Doe" />
-
-            <!-- Doctor/Expert (if applicable) -->
-            <LinearLayout
-                android:id="@+id/ll_doctor"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
+                android:layout_marginTop="1dp"
                 android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:visibility="visible">
-
-                <ImageView
-                    android:layout_width="12dp"
-                    android:layout_height="12dp"
-                    android:src="@drawable/ic_doctor"
-                    app:tint="@color/text_secondary" />
+                android:orientation="horizontal">
 
                 <TextView
-                    android:id="@+id/tv_doctor"
+                    android:id="@+id/tv_music_artist"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="4dp"
                     android:ellipsize="end"
                     android:maxLines="1"
-                    android:text="Dr. John Doe"
+                    android:text="Artist Name"
                     android:textColor="@color/text_secondary"
                     android:textSize="11sp"
-                    tools:text="Dr. Sarah Johnson" />
+                    tools:text="Dr. ccc" />
 
             </LinearLayout>
 
@@ -129,7 +142,7 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
+                android:layout_marginTop="3dp"
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
 
@@ -139,26 +152,29 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:background="@drawable/category_badge_background"
-                    android:paddingStart="8dp"
-                    android:paddingTop="2dp"
-                    android:paddingEnd="8dp"
-                    android:paddingBottom="2dp"
+                    android:paddingStart="6dp"
+                    android:paddingTop="1dp"
+                    android:paddingEnd="6dp"
+                    android:paddingBottom="1dp"
                     android:text="Deep Sleep"
                     android:textColor="@color/colorPrimary"
-                    android:textSize="10sp"
-                    tools:text="Meditation" />
+                    android:textSize="9sp"
+                    android:maxLines="1"
+                    android:maxWidth="80dp"
+                    android:ellipsize="end"
+                    tools:text="Stress Relief" />
 
                 <!-- Duration -->
                 <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
+                    android:layout_marginStart="6dp"
                     android:gravity="center_vertical"
                     android:orientation="horizontal">
 
                     <ImageView
-                        android:layout_width="12dp"
-                        android:layout_height="12dp"
+                        android:layout_width="10dp"
+                        android:layout_height="10dp"
                         android:src="@drawable/ic_time"
                         app:tint="@color/text_secondary" />
 
@@ -169,80 +185,12 @@
                         android:layout_marginStart="2dp"
                         android:text="3:45"
                         android:textColor="@color/text_secondary"
-                        android:textSize="11sp"
-                        tools:text="15:30" />
-
-                </LinearLayout>
-
-                <!-- Rating -->
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <ImageView
-                        android:layout_width="12dp"
-                        android:layout_height="12dp"
-                        android:src="@drawable/ic_star"
-                        app:tint="@color/colorAccent" />
-
-                    <TextView
-                        android:id="@+id/tv_rating"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="2dp"
-                        android:text="4.5"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="11sp"
-                        tools:text="4.8" />
+                        android:textSize="10sp"
+                        tools:text="01:00" />
 
                 </LinearLayout>
 
             </LinearLayout>
-
-        </LinearLayout>
-
-        <!-- Action Container -->
-        <LinearLayout
-            android:id="@+id/ll_action_container"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:gravity="center"
-            android:orientation="horizontal"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent">
-
-            <!-- Favorite Button -->
-            <ImageButton
-                android:id="@+id/ib_favorite"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:padding="6dp"
-                android:src="@drawable/ic_favorite_border"
-                app:tint="@color/icon_tint"
-                android:contentDescription="@string/favorite" />
-
-            <!-- Play Button -->
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_play"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:layout_marginStart="4dp"
-                android:insetTop="0dp"
-                android:insetBottom="0dp"
-                android:padding="0dp"
-                app:cornerRadius="24dp"
-                app:icon="@drawable/ic_play_arrow"
-                app:iconGravity="textStart"
-                app:iconPadding="0dp"
-                app:iconSize="24dp"
-                app:iconTint="@color/white"
-                android:backgroundTint="@color/colorPrimary"
-                android:alpha="0.9" />
 
         </LinearLayout>
 
