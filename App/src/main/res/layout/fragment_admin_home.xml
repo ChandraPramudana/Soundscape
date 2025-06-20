@@ -74,12 +74,16 @@
 
                 <!-- Total Users Card -->
                 <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/card_total_users"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:layout_marginEnd="8dp"
                     app:cardCornerRadius="12dp"
-                    app:cardElevation="2dp">
+                    app:cardElevation="2dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:foreground="?attr/selectableItemBackground">
 
                     <RelativeLayout
                         android:layout_width="match_parent"
@@ -134,12 +138,16 @@
 
                 <!-- Total Music Card -->
                 <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/card_total_music"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:layout_marginStart="8dp"
                     app:cardCornerRadius="12dp"
-                    app:cardElevation="2dp">
+                    app:cardElevation="2dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:foreground="?attr/selectableItemBackground">
 
                     <RelativeLayout
                         android:layout_width="match_parent"

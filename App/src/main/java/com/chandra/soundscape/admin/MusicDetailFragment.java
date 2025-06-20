@@ -1,8 +1,14 @@
 package com.chandra.soundscape.admin;
 
+import android.Manifest;
+import android.content.pm.PackageManager;
+import android.graphics.Canvas;
+import android.graphics.Paint;
+import android.graphics.pdf.PdfDocument;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -18,15 +24,19 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import com.bumptech.glide.Glide;
 import com.chandra.soundscape.R;
 import com.chandra.soundscape.api.MusicApiClient;
 import com.chandra.soundscape.models.MusicTrack;
 import com.google.android.material.appbar.CollapsingToolbarLayout;
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.chip.Chip;
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -38,6 +48,7 @@ public class MusicDetailFragment extends Fragment {
     private static final String TAG = "MusicDetailFragment";
     private static final String ARG_MUSIC_ID = "music_id";
     private static final String ARG_MUSIC = "music";
+    private static final int PERMISSION_REQUEST_WRITE = 100;
 
     // UI Components
     private CollapsingToolbarLayout collapsingToolbar;
@@ -47,7 +58,7 @@ public class MusicDetailFragment extends Fragment {
     private TextView tvUploadDate, tvFileFormat, tvTotalPlays;
     private Chip chipCategory;
     private MaterialCardView cardDoctor, cardJournal, cardDescription, cardPlayer;
-    private FloatingActionButton fabPlayPause;
+    private MaterialButton btnExportPdf;
     private ProgressBar progressBar, progressBarPlayer;
     private Toolbar toolbar;
 
@@ -110,6 +121,7 @@ public class MusicDetailFragment extends Fragment {
             initViews(view);
             setupToolbar();
             setupMediaPlayer();
+            setupExportButton();
 
             if (musicTrack != null) {
                 displayMusicDetails();
@@ -144,6 +156,9 @@ public class MusicDetailFragment extends Fragment {
             tvPlayCount = view.findViewById(R.id.tv_play_count);
             chipCategory = view.findViewById(R.id.chip_category);
 
+            // Export button
+            btnExportPdf = view.findViewById(R.id.btn_export_pdf);
+
             // Doctor card
             cardDoctor = view.findViewById(R.id.card_doctor);
             tvDoctorName = view.findViewById(R.id.tv_doctor_name);
@@ -168,12 +183,6 @@ public class MusicDetailFragment extends Fragment {
             seekBar = view.findViewById(R.id.seek_bar);
             ivPlayPause = view.findViewById(R.id.iv_play_pause);
             progressBarPlayer = view.findViewById(R.id.progress_bar_player);
-
-            // FAB
-            fabPlayPause = view.findViewById(R.id.fab_play_pause);
-            if (fabPlayPause != null) {
-                fabPlayPause.setOnClickListener(v -> togglePlayPause());
-            }
 
             // Progress
             progressBar = view.findViewById(R.id.progress_bar);
@@ -217,6 +226,18 @@ public class MusicDetailFragment extends Fragment {
             }
         } catch (Exception e) {
             Log.e(TAG, "Error setting up toolbar", e);
+        }
+    }
+
+    private void setupExportButton() {
+        if (btnExportPdf != null) {
+            btnExportPdf.setOnClickListener(v -> {
+                if (checkStoragePermission()) {
+                    exportToPdf();
+                } else {
+                    requestStoragePermission();
+                }
+            });
         }
     }
 
@@ -418,11 +439,9 @@ public class MusicDetailFragment extends Fragment {
             // Setup player if audio URL exists
             if (musicTrack.getAudioUrl() != null && !musicTrack.getAudioUrl().isEmpty()) {
                 cardPlayer.setVisibility(View.VISIBLE);
-                fabPlayPause.setVisibility(View.VISIBLE);
                 prepareMusic();
             } else {
                 cardPlayer.setVisibility(View.GONE);
-                fabPlayPause.setVisibility(View.GONE);
             }
 
         } catch (Exception e) {
@@ -461,6 +480,208 @@ public class MusicDetailFragment extends Fragment {
         return dateString;
     }
 
+    // PDF Export Functions
+    private boolean checkStoragePermission() {
+        return ContextCompat.checkSelfPermission(requireContext(),
+                Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    private void requestStoragePermission() {
+        ActivityCompat.requestPermissions(requireActivity(),
+                new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                PERMISSION_REQUEST_WRITE);
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
+                                           @NonNull int[] grantResults) {
+        if (requestCode == PERMISSION_REQUEST_WRITE) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                exportToPdf();
+            } else {
+                Toast.makeText(getContext(), "Permission diperlukan untuk export PDF", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+    private void exportToPdf() {
+        if (musicTrack == null) {
+            Toast.makeText(getContext(), "Data musik tidak tersedia", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        try {
+            // Create a new PdfDocument
+            PdfDocument document = new PdfDocument();
+
+            // Create a page description
+            PdfDocument.PageInfo pageInfo = new PdfDocument.PageInfo.Builder(595, 842, 1).create(); // A4 size
+            PdfDocument.Page page = document.startPage(pageInfo);
+
+            Canvas canvas = page.getCanvas();
+            Paint paint = new Paint();
+
+            int y = 50; // Starting Y position
+            int leftMargin = 50;
+            int lineHeight = 25;
+
+            // Title
+            paint.setTextSize(24);
+            paint.setFakeBoldText(true);
+            canvas.drawText("Detail Musik Soundscape", leftMargin, y, paint);
+            y += lineHeight * 2;
+
+            // Reset paint for regular text
+            paint.setTextSize(14);
+            paint.setFakeBoldText(false);
+
+            // Music Title
+            paint.setFakeBoldText(true);
+            canvas.drawText("Judul Musik:", leftMargin, y, paint);
+            paint.setFakeBoldText(false);
+            y += lineHeight;
+            canvas.drawText(musicTrack.getTitle() != null ? musicTrack.getTitle() : "-", leftMargin + 20, y, paint);
+            y += lineHeight * 2;
+
+            // Artist
+            if (musicTrack.getArtist() != null && !musicTrack.getArtist().isEmpty()) {
+                paint.setFakeBoldText(true);
+                canvas.drawText("Artis/Komposer:", leftMargin, y, paint);
+                paint.setFakeBoldText(false);
+                y += lineHeight;
+                canvas.drawText(musicTrack.getArtist(), leftMargin + 20, y, paint);
+                y += lineHeight * 2;
+            }
+
+            // Category
+            paint.setFakeBoldText(true);
+            canvas.drawText("Kategori:", leftMargin, y, paint);
+            paint.setFakeBoldText(false);
+            y += lineHeight;
+            canvas.drawText(musicTrack.getCategory() != null ? musicTrack.getCategory() : "-", leftMargin + 20, y, paint);
+            y += lineHeight * 2;
+
+            // Doctor Name
+            if (musicTrack.getDoctorName() != null && !musicTrack.getDoctorName().isEmpty()) {
+                paint.setFakeBoldText(true);
+                canvas.drawText("Direkomendasikan oleh:", leftMargin, y, paint);
+                paint.setFakeBoldText(false);
+                y += lineHeight;
+                canvas.drawText(musicTrack.getDoctorName(), leftMargin + 20, y, paint);
+                y += lineHeight * 2;
+            }
+
+            // Journal Reference
+            if (musicTrack.getJournalReference() != null && !musicTrack.getJournalReference().isEmpty()) {
+                paint.setFakeBoldText(true);
+                canvas.drawText("Referensi Jurnal:", leftMargin, y, paint);
+                paint.setFakeBoldText(false);
+                y += lineHeight;
+
+                // Handle long text with line breaks
+                String[] lines = wrapText(musicTrack.getJournalReference(), 500, paint);
+                for (String line : lines) {
+                    canvas.drawText(line, leftMargin + 20, y, paint);
+                    y += lineHeight;
+                }
+                y += lineHeight;
+            }
+
+            // Description
+            if (musicTrack.getDescription() != null && !musicTrack.getDescription().isEmpty()) {
+                paint.setFakeBoldText(true);
+                canvas.drawText("Deskripsi:", leftMargin, y, paint);
+                paint.setFakeBoldText(false);
+                y += lineHeight;
+
+                // Handle long text with line breaks
+                String[] lines = wrapText(musicTrack.getDescription(), 500, paint);
+                for (String line : lines) {
+                    canvas.drawText(line, leftMargin + 20, y, paint);
+                    y += lineHeight;
+                }
+                y += lineHeight;
+            }
+
+            // Additional Info
+            y += lineHeight;
+            paint.setFakeBoldText(true);
+            canvas.drawText("Informasi Tambahan:", leftMargin, y, paint);
+            paint.setFakeBoldText(false);
+            y += lineHeight;
+
+            // Upload Date
+            canvas.drawText("Tanggal Upload: " + (tvUploadDate.getText() != null ? tvUploadDate.getText() : "-"),
+                    leftMargin + 20, y, paint);
+            y += lineHeight;
+
+            // Duration
+            canvas.drawText("Durasi: " + (musicTrack.getDuration() != null ? musicTrack.getDuration() : "-"),
+                    leftMargin + 20, y, paint);
+            y += lineHeight;
+
+            // Play Count
+            canvas.drawText("Total Pemutaran: " + musicTrack.getPlayCount() + " kali",
+                    leftMargin + 20, y, paint);
+
+            // Footer
+            y = 800;
+            paint.setTextSize(10);
+            paint.setColor(0xFF888888);
+            SimpleDateFormat dateFormat = new SimpleDateFormat("dd MMMM yyyy HH:mm", new Locale("id", "ID"));
+            canvas.drawText("Diekspor pada: " + dateFormat.format(new Date()), leftMargin, y, paint);
+
+            // Finish the page
+            document.finishPage(page);
+
+            // Save the document
+            String fileName = "Soundscape_" + musicTrack.getTitle().replaceAll("[^a-zA-Z0-9]", "_") +
+                    "_" + System.currentTimeMillis() + ".pdf";
+            File file = new File(Environment.getExternalStoragePublicDirectory(
+                    Environment.DIRECTORY_DOWNLOADS), fileName);
+
+            FileOutputStream fos = new FileOutputStream(file);
+            document.writeTo(fos);
+            document.close();
+            fos.close();
+
+            Toast.makeText(getContext(), "PDF berhasil disimpan di folder Download", Toast.LENGTH_LONG).show();
+            Log.d(TAG, "PDF saved to: " + file.getAbsolutePath());
+
+        } catch (Exception e) {
+            Log.e(TAG, "Error creating PDF", e);
+            Toast.makeText(getContext(), "Gagal membuat PDF: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private String[] wrapText(String text, int maxWidth, Paint paint) {
+        String[] words = text.split(" ");
+        java.util.List<String> lines = new java.util.ArrayList<>();
+        StringBuilder currentLine = new StringBuilder();
+
+        for (String word : words) {
+            String testLine = currentLine.length() == 0 ? word : currentLine + " " + word;
+            float textWidth = paint.measureText(testLine);
+
+            if (textWidth > maxWidth && currentLine.length() > 0) {
+                lines.add(currentLine.toString());
+                currentLine = new StringBuilder(word);
+            } else {
+                if (currentLine.length() > 0) {
+                    currentLine.append(" ");
+                }
+                currentLine.append(word);
+            }
+        }
+
+        if (currentLine.length() > 0) {
+            lines.add(currentLine.toString());
+        }
+
+        return lines.toArray(new String[0]);
+    }
+
+    // Media Player Functions
     private void prepareMusic() {
         if (musicTrack == null || musicTrack.getAudioUrl() == null) return;
 
@@ -526,10 +747,8 @@ public class MusicDetailFragment extends Fragment {
     private void updatePlayPauseButton() {
         if (isPlaying) {
             ivPlayPause.setImageResource(R.drawable.ic_pause);
-            fabPlayPause.setImageResource(R.drawable.ic_pause);
         } else {
             ivPlayPause.setImageResource(R.drawable.ic_play_arrow);
-            fabPlayPause.setImageResource(R.drawable.ic_play_arrow);
         }
     }
 

@@ -1,9 +1,16 @@
 package com.chandra.soundscape.api;
 
 import android.util.Log;
+
+import com.chandra.soundscape.admin.ListenerListFragment;
 import com.chandra.soundscape.models.MusicTrack;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -17,6 +24,8 @@ import okhttp3.RequestBody;
 import okhttp3.ResponseBody;
 import okhttp3.Interceptor;
 import okhttp3.Request;
+
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.io.IOException;
@@ -58,11 +67,19 @@ public class MusicApiClient {
         @Headers("Prefer: count=exact")
         Call<List<JsonObject>> getTotalUsers(@Query("select") String select);
 
+        @GET("rest/v1/users")
+        Call<List<JsonObject>> getListeners(@Query("select") String select,
+                                            @Query("order") String order);
+
         // Get total music count
         @GET("rest/v1/music_tracks")
         @Headers("Prefer: count=exact")
         Call<List<JsonObject>> getTotalMusic(@Query("select") String select,
                                              @Query("is_active") String isActive);
+
+        @GET("rest/v1/user_profiles")
+        Call<List<JsonObject>> getUserProfiles(@Query("select") String select,
+                                               @Query("order") String order);
 
         // Search music
         @GET("rest/v1/music_tracks")
@@ -800,6 +817,176 @@ public class MusicApiClient {
         });
     }
 
+    public void getUserProfiles(ApiCallback<List<ListenerListFragment.Listener>> callback) {
+        Log.d(TAG, "=== GETTING USER PROFILES (SIMPLE VERSION) ===");
+
+        // Direct HTTP call
+        String url = SUPABASE_URL + "/rest/v1/user_profiles?select=*&order=created_at.desc";
+
+        OkHttpClient client = new OkHttpClient.Builder()
+                .connectTimeout(10, TimeUnit.SECONDS)
+                .build();
+
+        Request request = new Request.Builder()
+                .url(url)
+                .addHeader("apikey", SUPABASE_ANON_KEY)
+                .addHeader("Authorization", "Bearer " + SUPABASE_ANON_KEY)
+                .build();
+
+        client.newCall(request).enqueue(new okhttp3.Callback() {
+            @Override
+            public void onFailure(okhttp3.Call call, IOException e) {
+                Log.e(TAG, "Request failed", e);
+                callback.onError("Network error: " + e.getMessage());
+            }
+
+            @Override
+            public void onResponse(okhttp3.Call call, okhttp3.Response response) throws IOException {
+                try {
+                    if (!response.isSuccessful()) {
+                        callback.onError("HTTP " + response.code());
+                        return;
+                    }
+
+                    String jsonData = response.body().string();
+                    Log.d(TAG, "Response received, length: " + jsonData.length());
+
+                    // Parse JSON manually
+                    List<ListenerListFragment.Listener> listeners = new ArrayList<>();
+
+                    JSONArray jsonArray = new JSONArray(jsonData);
+                    Log.d(TAG, "Parsed " + jsonArray.length() + " profiles");
+
+                    for (int i = 0; i < jsonArray.length(); i++) {
+                        JSONObject obj = jsonArray.getJSONObject(i);
+
+                        ListenerListFragment.Listener listener = new ListenerListFragment.Listener();
+
+                        listener.setId(obj.optString("id", ""));
+                        listener.setEmail(obj.optString("email", ""));
+                        listener.setName(obj.optString("name", ""));
+                        listener.setJoinDate(obj.optString("created_at", ""));
+                        listener.setTotalPlayed(obj.optInt("total_played", 0));
+                        listener.setLastActive(obj.optString("last_active", obj.optString("created_at", "")));
+
+                        // Fix empty name
+                        if (listener.getName().isEmpty() && listener.getEmail().contains("@")) {
+                            listener.setName(listener.getEmail().split("@")[0]);
+                        }
+
+                        listeners.add(listener);
+                        Log.d(TAG, "Added: " + listener.getName() + " (" + listener.getEmail() + ")");
+                    }
+
+                    Log.d(TAG, "✅ Total parsed: " + listeners.size() + " listeners");
+                    callback.onSuccess(listeners);
+
+                } catch (Exception e) {
+                    Log.e(TAG, "Parse error", e);
+                    callback.onError("Parse error: " + e.getMessage());
+                }
+            }
+        });
+    }
+
+    public void getListeners(ApiCallback<List<ListenerListFragment.Listener>> callback) {
+        Log.d(TAG, "=== GETTING LISTENERS ===");
+
+        // Query untuk mendapatkan data users dengan field yang diperlukan
+        String select = "id,email,created_at,raw_user_meta_data";
+        String order = "created_at.desc";
+
+        apiService.getListeners(select, order).enqueue(new Callback<List<JsonObject>>() {
+            @Override
+            public void onResponse(Call<List<JsonObject>> call, Response<List<JsonObject>> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    try {
+                        List<JsonObject> usersData = response.body();
+                        List<ListenerListFragment.Listener> listeners = new ArrayList<>();
+
+                        for (JsonObject userData : usersData) {
+                            ListenerListFragment.Listener listener = new ListenerListFragment.Listener();
+
+                            // Extract user data
+                            listener.setId(userData.has("id") ? userData.get("id").getAsString() : "");
+                            listener.setEmail(userData.has("email") ? userData.get("email").getAsString() : "");
+                            listener.setJoinDate(userData.has("created_at") ? userData.get("created_at").getAsString() : "");
+
+                            // Extract name from raw_user_meta_data if available
+                            if (userData.has("raw_user_meta_data") && !userData.get("raw_user_meta_data").isJsonNull()) {
+                                JsonObject metaData = userData.getAsJsonObject("raw_user_meta_data");
+                                if (metaData.has("full_name")) {
+                                    listener.setName(metaData.get("full_name").getAsString());
+                                } else if (metaData.has("name")) {
+                                    listener.setName(metaData.get("name").getAsString());
+                                } else {
+                                    // Use email prefix as name
+                                    String email = listener.getEmail();
+                                    if (email != null && email.contains("@")) {
+                                        listener.setName(email.substring(0, email.indexOf("@")));
+                                    } else {
+                                        listener.setName("Pengguna");
+                                    }
+                                }
+                            } else {
+                                // Use email prefix as name
+                                String email = listener.getEmail();
+                                if (email != null && email.contains("@")) {
+                                    listener.setName(email.substring(0, email.indexOf("@")));
+                                } else {
+                                    listener.setName("Pengguna");
+                                }
+                            }
+
+                            // Set default values for now - you'll need to implement these separately
+                            listener.setTotalPlayed(0); // Needs separate query to get play count
+                            listener.setLastActive(listener.getJoinDate()); // Default to join date
+
+                            listeners.add(listener);
+                        }
+
+                        Log.d(TAG, "✅ Successfully loaded " + listeners.size() + " listeners");
+                        callback.onSuccess(listeners);
+
+                    } catch (Exception e) {
+                        Log.e(TAG, "Error parsing listeners data", e);
+                        callback.onError("Error parsing data: " + e.getMessage());
+                    }
+                } else {
+                    String errorMsg = "Failed to get listeners: HTTP " + response.code();
+                    try {
+                        if (response.errorBody() != null) {
+                            String errorBody = response.errorBody().string();
+                            Log.e(TAG, "Error body: " + errorBody);
+                            errorMsg += " - " + errorBody;
+                        }
+                    } catch (Exception e) {
+                        Log.e(TAG, "Error reading error body", e);
+                    }
+                    callback.onError(errorMsg);
+                }
+            }
+
+            @Override
+            public void onFailure(Call<List<JsonObject>> call, Throwable t) {
+                Log.e(TAG, "=== GET LISTENERS FAILURE ===", t);
+
+                String errorMessage = t.getMessage();
+                if (errorMessage != null) {
+                    if (errorMessage.contains("Unable to resolve host")) {
+                        callback.onError("❌ Tidak dapat terhubung ke server. Periksa koneksi internet.");
+                    } else if (errorMessage.contains("timeout")) {
+                        callback.onError("❌ Koneksi timeout. Coba lagi.");
+                    } else {
+                        callback.onError("❌ Network error: " + errorMessage);
+                    }
+                } else {
+                    callback.onError("❌ Terjadi kesalahan jaringan");
+                }
+            }
+        });
+    }
+
     // Optimized method that tries RPC first, then falls back to regular queries
     public void getOptimizedStatistics(ApiCallback<Statistics> callback) {
         // Try RPC first (fastest)
@@ -814,6 +1001,88 @@ public class MusicApiClient {
                 Log.w(TAG, "RPC failed, trying regular method: " + error);
                 // Fallback to regular method
                 getStatistics(callback);
+            }
+        });
+    }
+
+    public void getSimpleUserProfiles(ApiCallback<String> callback) {
+        Log.d(TAG, "=== GETTING USER PROFILES (SIMPLE) ===");
+
+        // Build URL manually
+        String fullUrl = SUPABASE_URL + "/rest/v1/user_profiles?select=*&order=created_at.desc";
+        Log.d(TAG, "Full URL: " + fullUrl);
+
+        // Create basic HTTP client
+        OkHttpClient client = new OkHttpClient.Builder()
+                .connectTimeout(30, TimeUnit.SECONDS)
+                .readTimeout(30, TimeUnit.SECONDS)
+                .addInterceptor(chain -> {
+                    Request original = chain.request();
+
+                    Log.d(TAG, "Interceptor - URL: " + original.url());
+
+                    Request request = original.newBuilder()
+                            .header("apikey", SUPABASE_ANON_KEY)
+                            .header("Authorization", "Bearer " + SUPABASE_ANON_KEY)
+                            .header("Content-Type", "application/json")
+                            .header("Accept", "application/json")
+                            .build();
+
+                    Log.d(TAG, "Headers sent:");
+                    for (String name : request.headers().names()) {
+                        if (name.contains("apikey") || name.contains("Authorization")) {
+                            Log.d(TAG, "  " + name + ": [HIDDEN]");
+                        } else {
+                            Log.d(TAG, "  " + name + ": " + request.header(name));
+                        }
+                    }
+
+                    okhttp3.Response response = chain.proceed(request);
+
+                    Log.d(TAG, "Response received:");
+                    Log.d(TAG, "  Code: " + response.code());
+                    Log.d(TAG, "  Message: " + response.message());
+
+                    return response;
+                })
+                .build();
+
+        Request request = new Request.Builder()
+                .url(fullUrl)
+                .get()
+                .build();
+
+        client.newCall(request).enqueue(new okhttp3.Callback() {
+            @Override
+            public void onFailure(okhttp3.Call call, IOException e) {
+                Log.e(TAG, "Simple query failed", e);
+                callback.onError("Network error: " + e.getMessage());
+            }
+
+            @Override
+            public void onResponse(okhttp3.Call call, okhttp3.Response response) throws IOException {
+                try {
+                    String responseBody = response.body() != null ? response.body().string() : "";
+
+                    Log.d(TAG, "=== SIMPLE QUERY RESPONSE ===");
+                    Log.d(TAG, "Code: " + response.code());
+                    Log.d(TAG, "Body length: " + responseBody.length());
+
+                    if (responseBody.length() > 500) {
+                        Log.d(TAG, "Body (first 500 chars): " + responseBody.substring(0, 500));
+                    } else {
+                        Log.d(TAG, "Body: " + responseBody);
+                    }
+
+                    if (response.isSuccessful()) {
+                        callback.onSuccess(responseBody);
+                    } else {
+                        callback.onError("HTTP " + response.code() + ": " + responseBody);
+                    }
+                } catch (Exception e) {
+                    Log.e(TAG, "Error processing response", e);
+                    callback.onError("Error: " + e.getMessage());
+                }
             }
         });
     }

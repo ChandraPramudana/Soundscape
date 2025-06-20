@@ -25,7 +25,7 @@ public class AdminHomeFragment extends Fragment {
 
     // UI Components
     private TextView tvWelcome, tvTotalUsers, tvTotalMusic, tvLastUpdate;
-    private MaterialCardView cardUploadMusic, cardManageMusic;
+    private MaterialCardView cardUploadMusic, cardManageMusic, cardTotalUsers, cardTotalMusic;
     private SwipeRefreshLayout swipeRefreshLayout;
     private ProgressBar progressUsers, progressMusic;
 
@@ -66,6 +66,8 @@ public class AdminHomeFragment extends Fragment {
         tvLastUpdate = view.findViewById(R.id.tv_last_update);
         cardUploadMusic = view.findViewById(R.id.card_upload_music);
         cardManageMusic = view.findViewById(R.id.card_manage_music);
+        cardTotalUsers = view.findViewById(R.id.card_total_users);
+        cardTotalMusic = view.findViewById(R.id.card_total_music);
         swipeRefreshLayout = view.findViewById(R.id.swipe_refresh);
         progressUsers = view.findViewById(R.id.progress_users);
         progressMusic = view.findViewById(R.id.progress_music);
@@ -110,6 +112,39 @@ public class AdminHomeFragment extends Fragment {
     }
 
     private void setupClickListeners() {
+        // Total Users card - Navigate to Listener List
+        if (cardTotalUsers != null) {
+            cardTotalUsers.setOnClickListener(v -> {
+                // Navigate to listener list fragment
+                getParentFragmentManager()
+                        .beginTransaction()
+                        .replace(R.id.fragment_container, new ListenerListFragment())
+                        .addToBackStack(null)
+                        .commit();
+            });
+        }
+
+        // Total Music card - Navigate to Music List
+        if (cardTotalMusic != null) {
+            cardTotalMusic.setOnClickListener(v -> {
+                // Navigate to music list fragment
+                getParentFragmentManager()
+                        .beginTransaction()
+                        .replace(R.id.fragment_container, new MusicListFragment())
+                        .addToBackStack(null)
+                        .commit();
+
+                // Update bottom navigation
+                if (getActivity() != null) {
+                    com.google.android.material.bottomnavigation.BottomNavigationView bottomNav =
+                            getActivity().findViewById(R.id.bottom_navigation);
+                    if (bottomNav != null) {
+                        bottomNav.setSelectedItemId(R.id.nav_music_list);
+                    }
+                }
+            });
+        }
+
         // Upload music card
         cardUploadMusic.setOnClickListener(v -> {
             // Navigate to upload fragment

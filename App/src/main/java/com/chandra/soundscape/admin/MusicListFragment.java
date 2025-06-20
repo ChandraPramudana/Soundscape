@@ -10,6 +10,7 @@ import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ProgressBar;
+import android.widget.TextView;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -24,8 +25,12 @@ import com.chandra.soundscape.admin.adapters.MusicAdminAdapter;
 import com.chandra.soundscape.api.MusicApiClient;
 import com.chandra.soundscape.models.MusicTrack;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.chip.Chip;
+import com.google.android.material.chip.ChipGroup;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class MusicListFragment extends Fragment implements MusicAdminAdapter.OnMusicActionListener {
     private static final String TAG = "MusicListFragment";
@@ -38,11 +43,18 @@ public class MusicListFragment extends Fragment implements MusicAdminAdapter.OnM
     private EditText etSearch;
     private ImageButton btnClearSearch;
     private MaterialButton btnAddFirst;
+    private ChipGroup chipGroupCategories;
+    private TextView tvResultCount, tvEmptyTitle, tvEmptyMessage;
 
-    // Adapter
+    // Adapter & Data
     private MusicAdminAdapter musicAdapter;
     private List<MusicTrack> musicList = new ArrayList<>();
     private List<MusicTrack> filteredList = new ArrayList<>();
+    private Set<String> availableCategories = new HashSet<>();
+
+    // Filter State
+    private String currentSearchQuery = "";
+    private String selectedCategory = "Semua";
 
     // API & Auth
     private MusicApiClient musicApiClient;
@@ -58,7 +70,7 @@ public class MusicListFragment extends Fragment implements MusicAdminAdapter.OnM
         musicApiClient = MusicApiClient.getInstance();
         authManager = SupabaseAuthManager.getInstance(requireContext());
 
-        // IMPORTANT: Set access token for API client
+        // Set access token
         String accessToken = authManager.getAccessToken();
         if (accessToken != null) {
             musicApiClient.setAccessToken(accessToken);
@@ -71,26 +83,40 @@ public class MusicListFragment extends Fragment implements MusicAdminAdapter.OnM
         setupRecyclerView();
         setupSearch();
         setupSwipeRefresh();
+        setupCategoryFilter();
         loadMusic();
 
         return view;
     }
 
     private void initViews(View view) {
+        // RecyclerView & Progress
         recyclerMusic = view.findViewById(R.id.recycler_music);
         swipeRefresh = view.findViewById(R.id.swipe_refresh);
         progressBar = view.findViewById(R.id.progress_bar);
+
+        // Empty View
         emptyView = view.findViewById(R.id.empty_view);
-        etSearch = view.findViewById(R.id.et_search);
-        btnClearSearch = view.findViewById(R.id.btn_clear_search);
+        tvEmptyTitle = view.findViewById(R.id.tv_empty_title);
+        tvEmptyMessage = view.findViewById(R.id.tv_empty_message);
         btnAddFirst = view.findViewById(R.id.btn_add_first);
 
-        // Add first button click
+        // Search
+        etSearch = view.findViewById(R.id.et_search);
+        btnClearSearch = view.findViewById(R.id.btn_clear_search);
+
+        // Category & Stats
+        chipGroupCategories = view.findViewById(R.id.chip_group_categories);
+        tvResultCount = view.findViewById(R.id.tv_result_count);
+
+        // Click listener for add button
         btnAddFirst.setOnClickListener(v -> navigateToUpload());
     }
 
     private void setupRecyclerView() {
-        recyclerMusic.setLayoutManager(new LinearLayoutManager(getContext()));
+        LinearLayoutManager layoutManager = new LinearLayoutManager(getContext());
+        recyclerMusic.setLayoutManager(layoutManager);
+
         musicAdapter = new MusicAdminAdapter(getContext(), filteredList, this);
         recyclerMusic.setAdapter(musicAdapter);
     }
@@ -102,8 +128,9 @@ public class MusicListFragment extends Fragment implements MusicAdminAdapter.OnM
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
-                filterMusic(s.toString());
+                currentSearchQuery = s.toString();
                 btnClearSearch.setVisibility(s.length() > 0 ? View.VISIBLE : View.GONE);
+                filterMusic();
             }
 
             @Override
@@ -112,7 +139,8 @@ public class MusicListFragment extends Fragment implements MusicAdminAdapter.OnM
 
         btnClearSearch.setOnClickListener(v -> {
             etSearch.setText("");
-            btnClearSearch.setVisibility(View.GONE);
+            currentSearchQuery = "";
+            filterMusic();
         });
     }
 
@@ -125,6 +153,39 @@ public class MusicListFragment extends Fragment implements MusicAdminAdapter.OnM
         );
     }
 
+    private void setupCategoryFilter() {
+        // Add default "Semua" chip
+        addCategoryChip("Semua", true);
+    }
+
+    private void addCategoryChip(String category, boolean isSelected) {
+        Chip chip = new Chip(getContext());
+        chip.setText(category);
+        chip.setCheckable(true);
+        chip.setChecked(isSelected);
+
+        // Style chip
+        if (category.equals("Semua")) {
+            chip.setChipIconResource(R.drawable.ic_all_inclusive);
+        }
+
+        chip.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (isChecked) {
+                // Uncheck other chips
+                for (int i = 0; i < chipGroupCategories.getChildCount(); i++) {
+                    View child = chipGroupCategories.getChildAt(i);
+                    if (child instanceof Chip && child != chip) {
+                        ((Chip) child).setChecked(false);
+                    }
+                }
+                selectedCategory = category;
+                filterMusic();
+            }
+        });
+
+        chipGroupCategories.addView(chip);
+    }
+
     private void loadMusic() {
         showLoading(true);
 
@@ -134,13 +195,28 @@ public class MusicListFragment extends Fragment implements MusicAdminAdapter.OnM
                 if (getActivity() != null) {
                     getActivity().runOnUiThread(() -> {
                         musicList.clear();
+                        availableCategories.clear();
+                        availableCategories.add("Semua");
+
                         if (result != null) {
                             musicList.addAll(result);
+
+                            // Extract unique categories
+                            for (MusicTrack track : result) {
+                                if (track.getCategory() != null && !track.getCategory().isEmpty()) {
+                                    availableCategories.add(track.getCategory());
+                                }
+                            }
+
+                            // Update category chips
+                            updateCategoryChips();
                         }
-                        filterMusic(etSearch.getText().toString());
+
+                        filterMusic();
                         showLoading(false);
                         swipeRefresh.setRefreshing(false);
-                        updateEmptyView();
+
+                        Log.d(TAG, "Music loaded: " + musicList.size() + " tracks");
                     });
                 }
             }
@@ -159,24 +235,52 @@ public class MusicListFragment extends Fragment implements MusicAdminAdapter.OnM
         });
     }
 
-    private void filterMusic(String query) {
+    private void updateCategoryChips() {
+        // Clear existing chips except "Semua"
+        for (int i = chipGroupCategories.getChildCount() - 1; i >= 1; i--) {
+            chipGroupCategories.removeViewAt(i);
+        }
+
+        // Add category chips sorted alphabetically
+        List<String> sortedCategories = new ArrayList<>(availableCategories);
+        sortedCategories.remove("Semua");
+        sortedCategories.sort(String::compareTo);
+
+        for (String category : sortedCategories) {
+            addCategoryChip(category, false);
+        }
+    }
+
+    private void filterMusic() {
         filteredList.clear();
 
-        if (query.isEmpty()) {
-            filteredList.addAll(musicList);
-        } else {
-            String lowerQuery = query.toLowerCase();
-            for (MusicTrack music : musicList) {
-                if (music.getTitle().toLowerCase().contains(lowerQuery) ||
-                        (music.getArtist() != null && music.getArtist().toLowerCase().contains(lowerQuery)) ||
-                        (music.getCategory() != null && music.getCategory().toLowerCase().contains(lowerQuery))) {
-                    filteredList.add(music);
-                }
+        for (MusicTrack track : musicList) {
+            boolean matchesCategory = selectedCategory.equals("Semua") ||
+                    (track.getCategory() != null && track.getCategory().equals(selectedCategory));
+
+            boolean matchesSearch = currentSearchQuery.isEmpty() ||
+                    (track.getTitle() != null && track.getTitle().toLowerCase().contains(currentSearchQuery.toLowerCase())) ||
+                    (track.getArtist() != null && track.getArtist().toLowerCase().contains(currentSearchQuery.toLowerCase())) ||
+                    (track.getCategory() != null && track.getCategory().toLowerCase().contains(currentSearchQuery.toLowerCase()));
+
+            if (matchesCategory && matchesSearch) {
+                filteredList.add(track);
             }
         }
 
+        // Update adapter
         musicAdapter.updateData(filteredList);
+
+        // Update result count
+        updateResultCount();
+
+        // Update empty view
         updateEmptyView();
+    }
+
+    private void updateResultCount() {
+        String resultText = filteredList.size() + " musik ditemukan";
+        tvResultCount.setText(resultText);
     }
 
     private void showLoading(boolean show) {
@@ -188,27 +292,41 @@ public class MusicListFragment extends Fragment implements MusicAdminAdapter.OnM
         boolean isEmpty = filteredList.isEmpty();
         emptyView.setVisibility(isEmpty ? View.VISIBLE : View.GONE);
         recyclerMusic.setVisibility(isEmpty ? View.GONE : View.VISIBLE);
+
+        if (isEmpty) {
+            if (!currentSearchQuery.isEmpty()) {
+                tvEmptyTitle.setText("Tidak ada hasil");
+                tvEmptyMessage.setText("Tidak ada musik untuk \"" + currentSearchQuery + "\"");
+                btnAddFirst.setVisibility(View.GONE);
+            } else if (!selectedCategory.equals("Semua")) {
+                tvEmptyTitle.setText("Kategori kosong");
+                tvEmptyMessage.setText("Belum ada musik dalam kategori " + selectedCategory);
+                btnAddFirst.setText("Tambah Musik " + selectedCategory);
+                btnAddFirst.setVisibility(View.VISIBLE);
+            } else {
+                tvEmptyTitle.setText("Belum ada musik");
+                tvEmptyMessage.setText("Mulai dengan menambahkan musik pertama");
+                btnAddFirst.setText("Upload Musik Pertama");
+                btnAddFirst.setVisibility(View.VISIBLE);
+            }
+        }
     }
 
-    // =================== IMPLEMENTASI INTERFACE OnMusicActionListener ===================
+    // =================== INTERFACE IMPLEMENTATIONS ===================
 
     @Override
     public void onItemClick(MusicTrack music) {
-        // Navigasi ke detail musik dengan validasi
         if (music != null) {
             Log.d(TAG, "Music item clicked: " + music.getTitle());
 
             try {
-                // Pastikan music memiliki ID yang valid
                 if (music.getId() == null || music.getId().isEmpty()) {
                     Toast.makeText(requireContext(), "Data musik tidak valid", Toast.LENGTH_SHORT).show();
                     return;
                 }
 
-                // Navigate to MusicDetailFragment
                 MusicDetailFragment detailFragment = MusicDetailFragment.newInstance(music);
 
-                // Validasi fragment manager
                 if (getParentFragmentManager() != null && getActivity() != null) {
                     getParentFragmentManager()
                             .beginTransaction()
@@ -232,7 +350,6 @@ public class MusicListFragment extends Fragment implements MusicAdminAdapter.OnM
 
     @Override
     public void onEditClick(MusicTrack music) {
-        // Navigate to edit fragment
         EditMusicFragment editFragment = EditMusicFragment.newInstance(music);
         getParentFragmentManager()
                 .beginTransaction()
@@ -243,20 +360,17 @@ public class MusicListFragment extends Fragment implements MusicAdminAdapter.OnM
 
     @Override
     public void onDeleteClick(MusicTrack music) {
-        // Check authentication first
         if (!authManager.isUserLoggedIn()) {
             Toast.makeText(requireContext(), "Sesi login telah berakhir. Silakan login kembali.", Toast.LENGTH_LONG).show();
             return;
         }
 
-        // Update access token before delete operation
         String currentToken = authManager.getAccessToken();
         if (currentToken == null || currentToken.isEmpty()) {
             Toast.makeText(requireContext(), "Token autentikasi tidak valid. Silakan login ulang.", Toast.LENGTH_LONG).show();
             return;
         }
 
-        // Set the current token to API client
         musicApiClient.setAccessToken(currentToken);
 
         new AlertDialog.Builder(requireContext())
@@ -278,7 +392,6 @@ public class MusicListFragment extends Fragment implements MusicAdminAdapter.OnM
 
         progressBar.setVisibility(View.VISIBLE);
 
-        // Ensure we have the latest access token
         String accessToken = authManager.getAccessToken();
         if (accessToken == null || accessToken.isEmpty()) {
             progressBar.setVisibility(View.GONE);
@@ -286,7 +399,6 @@ public class MusicListFragment extends Fragment implements MusicAdminAdapter.OnM
             return;
         }
 
-        // Set access token again just before the delete call
         musicApiClient.setAccessToken(accessToken);
 
         musicApiClient.deleteMusic(music.getId(), new MusicApiClient.ApiCallback<Void>() {
@@ -298,19 +410,15 @@ public class MusicListFragment extends Fragment implements MusicAdminAdapter.OnM
                     getActivity().runOnUiThread(() -> {
                         progressBar.setVisibility(View.GONE);
 
-                        // Remove from both lists
                         musicList.remove(music);
                         filteredList.remove(music);
 
-                        // Update adapter
                         musicAdapter.updateData(filteredList);
-
-                        // Update empty view
+                        updateResultCount();
                         updateEmptyView();
 
                         Toast.makeText(getContext(), "✅ Musik berhasil dihapus permanen", Toast.LENGTH_SHORT).show();
 
-                        // Force refresh to ensure sync with database
                         loadMusic();
                     });
                 }
@@ -324,7 +432,6 @@ public class MusicListFragment extends Fragment implements MusicAdminAdapter.OnM
                     getActivity().runOnUiThread(() -> {
                         progressBar.setVisibility(View.GONE);
 
-                        // Show detailed error message
                         new AlertDialog.Builder(requireContext())
                                 .setTitle("❌ Gagal Menghapus")
                                 .setMessage(error + "\n\nSolusi:\n" +
@@ -334,7 +441,6 @@ public class MusicListFragment extends Fragment implements MusicAdminAdapter.OnM
                                 .setPositiveButton("OK", null)
                                 .show();
 
-                        // Refresh the list to show actual state
                         loadMusic();
                     });
                 }
@@ -343,13 +449,21 @@ public class MusicListFragment extends Fragment implements MusicAdminAdapter.OnM
     }
 
     private void navigateToUpload() {
+        // Pre-fill category if one is selected
+        Bundle args = new Bundle();
+        if (!selectedCategory.equals("Semua")) {
+            args.putString("preset_category", selectedCategory);
+        }
+
+        UploadMusicFragment uploadFragment = new UploadMusicFragment();
+        uploadFragment.setArguments(args);
+
         getParentFragmentManager()
                 .beginTransaction()
-                .replace(R.id.fragment_container, new UploadMusicFragment())
+                .replace(R.id.fragment_container, uploadFragment)
                 .addToBackStack(null)
                 .commit();
 
-        // Update bottom navigation
         if (getActivity() != null) {
             com.google.android.material.bottomnavigation.BottomNavigationView bottomNav =
                     getActivity().findViewById(R.id.bottom_navigation);
@@ -363,13 +477,11 @@ public class MusicListFragment extends Fragment implements MusicAdminAdapter.OnM
     public void onResume() {
         super.onResume();
 
-        // Update access token when fragment resumes
         String accessToken = authManager.getAccessToken();
         if (accessToken != null) {
             musicApiClient.setAccessToken(accessToken);
         }
 
-        // Refresh the list
         loadMusic();
     }
 }

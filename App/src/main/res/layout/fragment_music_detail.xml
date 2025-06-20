@@ -138,6 +138,18 @@
 
                     </LinearLayout>
 
+                    <!-- Export PDF Button -->
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_export_pdf"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:text="Export Detail ke PDF"
+                        app:icon="@drawable/ic_picture_as_pdf"
+                        app:iconGravity="textStart"
+                        app:cornerRadius="8dp"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+
                 </LinearLayout>
 
             </com.google.android.material.card.MaterialCardView>
@@ -489,17 +501,6 @@
         </LinearLayout>
 
     </androidx.core.widget.NestedScrollView>
-
-    <!-- Floating Action Button for Play/Pause -->
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/fab_play_pause"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom|end"
-        android:layout_margin="16dp"
-        android:src="@drawable/ic_play_arrow"
-        app:backgroundTint="@color/colorAccent"
-        android:visibility="gone" />
 
     <!-- Loading View -->
     <ProgressBar
