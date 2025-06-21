@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item
+        android:id="@+id/nav_doctor_home"
+        android:icon="@drawable/ic_home"
+        android:title="Beranda" />
+
+    <item
+        android:id="@+id/nav_doctor_music"
+        android:icon="@drawable/ic_music_note"
+        android:title="Musik" />
+
+    <item
+        android:id="@+id/nav_doctor_recommendations"
+        android:icon="@drawable/ic_recommend"
+        android:title="Rekomendasi" />
+
+    <item
+        android:id="@+id/nav_doctor_notifications"
+        android:icon="@drawable/ic_notifications"
+        android:title="Notifikasi" />
+
+    <item
+        android:id="@+id/nav_doctor_profile"
+        android:icon="@drawable/ic_person"
+        android:title="Profil" />
+
+</menu>

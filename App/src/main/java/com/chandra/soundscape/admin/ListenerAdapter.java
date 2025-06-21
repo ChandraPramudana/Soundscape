@@ -13,41 +13,55 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
-import java.util.TimeZone;
+import java.util.concurrent.TimeUnit;
 
-public class ListenerAdapter extends RecyclerView.Adapter<ListenerAdapter.ListenerViewHolder> {
+public class ListenerAdapter extends RecyclerView.Adapter<ListenerAdapter.ViewHolder> {
 
     private List<ListenerListFragment.Listener> listenerList;
-    // FIXED: Multiple date formats to handle Supabase timestamps
-    private SimpleDateFormat[] inputFormats = {
-            new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSSSSXXX", Locale.getDefault()), // With microseconds and timezone
-            new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX", Locale.getDefault()),    // With milliseconds and timezone
-            new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX", Locale.getDefault()),         // Without milliseconds but with timezone
-            new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())             // Basic format
-    };
-    private SimpleDateFormat outputFormat = new SimpleDateFormat("dd MMM yyyy", Locale.getDefault());
+    private SimpleDateFormat inputFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault());
+    private SimpleDateFormat outputFormat = new SimpleDateFormat("dd MMM yyyy", new Locale("id", "ID"));
+    private SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm", new Locale("id", "ID"));
 
     public ListenerAdapter(List<ListenerListFragment.Listener> listenerList) {
         this.listenerList = listenerList;
-        // Set timezone for all formats
-        for (SimpleDateFormat format : inputFormats) {
-            format.setTimeZone(TimeZone.getTimeZone("UTC"));
-        }
-        outputFormat.setTimeZone(TimeZone.getDefault());
     }
 
     @NonNull
     @Override
-    public ListenerViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+    public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext())
                 .inflate(R.layout.item_listener, parent, false);
-        return new ListenerViewHolder(view);
+        return new ViewHolder(view);
     }
 
     @Override
-    public void onBindViewHolder(@NonNull ListenerViewHolder holder, int position) {
+    public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         ListenerListFragment.Listener listener = listenerList.get(position);
-        holder.bind(listener);
+
+        // Set nama
+        holder.tvName.setText(listener.getName());
+
+        // Set email
+        holder.tvEmail.setText(listener.getEmail());
+
+        // Format dan set tanggal bergabung
+        String joinDate = formatDate(listener.getJoinDate());
+        holder.tvJoinDate.setText("Bergabung: " + joinDate);
+
+        // Set total played (dalam menit)
+        String totalPlayed = formatPlayTime(listener.getTotalPlayed());
+        holder.tvTotalPlayed.setText("Total Dengar: " + totalPlayed);
+
+        // Format dan set last active dengan status
+        String lastActiveText = formatLastActive(listener.getLastActive());
+        holder.tvLastActive.setText(lastActiveText);
+
+        // Set warna berdasarkan aktivitas terakhir
+        if (isRecentlyActive(listener.getLastActive())) {
+            holder.cardView.setCardBackgroundColor(holder.itemView.getContext().getColor(R.color.success));
+        } else {
+            holder.cardView.setCardBackgroundColor(holder.itemView.getContext().getColor(R.color.white));
+        }
     }
 
     @Override
@@ -55,113 +69,112 @@ public class ListenerAdapter extends RecyclerView.Adapter<ListenerAdapter.Listen
         return listenerList != null ? listenerList.size() : 0;
     }
 
-    // Helper method to parse Supabase timestamp
-    private Date parseSupabaseDate(String dateString) {
-        if (dateString == null || dateString.isEmpty()) {
-            return null;
+    // Helper method untuk format tanggal
+    private String formatDate(String dateStr) {
+        if (dateStr == null || dateStr.isEmpty()) {
+            return "-";
         }
 
-        // Remove 'Z' suffix if present and replace with +00:00
-        if (dateString.endsWith("Z")) {
-            dateString = dateString.substring(0, dateString.length() - 1) + "+00:00";
-        }
-
-        // Try parsing with different formats
-        for (SimpleDateFormat format : inputFormats) {
+        try {
+            Date date = inputFormat.parse(dateStr.replace("Z", ""));
+            return outputFormat.format(date);
+        } catch (ParseException e) {
+            // Try alternative formats
             try {
-                return format.parse(dateString);
-            } catch (ParseException e) {
-                // Try next format
+                SimpleDateFormat altFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
+                Date date = altFormat.parse(dateStr);
+                return outputFormat.format(date);
+            } catch (ParseException e2) {
+                return dateStr; // Return original if parsing fails
             }
         }
-
-        // If all formats fail, try removing microseconds manually
-        if (dateString.contains(".")) {
-            String[] parts = dateString.split("\\.");
-            if (parts.length > 1) {
-                String beforeDot = parts[0];
-                String afterDot = parts[1];
-
-                // Extract timezone if present
-                String timezone = "";
-                if (afterDot.contains("+")) {
-                    int plusIndex = afterDot.indexOf("+");
-                    timezone = afterDot.substring(plusIndex);
-                } else if (afterDot.contains("-") && afterDot.lastIndexOf("-") > 3) {
-                    int minusIndex = afterDot.lastIndexOf("-");
-                    timezone = afterDot.substring(minusIndex);
-                }
-
-                // Try parsing without microseconds
-                try {
-                    SimpleDateFormat fallbackFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault());
-                    fallbackFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
-                    return fallbackFormat.parse(beforeDot);
-                } catch (ParseException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-
-        return null;
     }
 
-    class ListenerViewHolder extends RecyclerView.ViewHolder {
-        private TextView tvName, tvEmail, tvJoinDate, tvTotalPlayed, tvLastActive, tvAvatar;
-        private MaterialCardView cardView;
-
-        public ListenerViewHolder(@NonNull View itemView) {
-            super(itemView);
-            cardView = itemView.findViewById(R.id.card_listener);
-            tvName = itemView.findViewById(R.id.tv_listener_name);
-            tvEmail = itemView.findViewById(R.id.tv_listener_email);
-            tvJoinDate = itemView.findViewById(R.id.tv_join_date);
-            tvTotalPlayed = itemView.findViewById(R.id.tv_total_played);
-            tvLastActive = itemView.findViewById(R.id.tv_last_active);
-            tvAvatar = itemView.findViewById(R.id.tv_avatar);
+    // Helper method untuk format waktu putar
+    private String formatPlayTime(int totalMinutes) {
+        if (totalMinutes == 0) {
+            return "0 menit";
         }
 
-        public void bind(ListenerListFragment.Listener listener) {
-            // Set name
-            String displayName = listener.getName();
-            if (displayName == null || displayName.isEmpty() || displayName.equals("Pengguna")) {
-                // Use email prefix as fallback
-                String email = listener.getEmail();
-                if (email != null && email.contains("@")) {
-                    displayName = email.substring(0, email.indexOf("@"));
-                } else {
-                    displayName = "Pengguna";
-                }
-            }
-            tvName.setText(displayName);
+        int hours = totalMinutes / 60;
+        int minutes = totalMinutes % 60;
 
-            // Set avatar initial
-            if (tvAvatar != null) {
-                String initial = displayName.substring(0, 1).toUpperCase();
-                tvAvatar.setText(initial);
-            }
+        if (hours > 0) {
+            return String.format(Locale.getDefault(), "%d jam %d menit", hours, minutes);
+        } else {
+            return String.format(Locale.getDefault(), "%d menit", minutes);
+        }
+    }
 
-            // Set email
-            tvEmail.setText(listener.getEmail());
+    // Helper method untuk format last active
+    private String formatLastActive(String lastActiveStr) {
+        if (lastActiveStr == null || lastActiveStr.isEmpty()) {
+            return "Terakhir aktif: Belum pernah";
+        }
 
-            // Format and set join date
-            Date joinDate = parseSupabaseDate(listener.getJoinDate());
-            if (joinDate != null) {
-                tvJoinDate.setText("Bergabung: " + outputFormat.format(joinDate));
+        try {
+            Date lastActive = inputFormat.parse(lastActiveStr.replace("Z", ""));
+            Date now = new Date();
+
+            long diffInMillis = now.getTime() - lastActive.getTime();
+            long days = TimeUnit.MILLISECONDS.toDays(diffInMillis);
+            long hours = TimeUnit.MILLISECONDS.toHours(diffInMillis);
+            long minutes = TimeUnit.MILLISECONDS.toMinutes(diffInMillis);
+
+            String status;
+            if (minutes < 60) {
+                status = minutes + " menit yang lalu";
+            } else if (hours < 24) {
+                status = hours + " jam yang lalu";
+            } else if (days < 7) {
+                status = days + " hari yang lalu";
+            } else if (days < 30) {
+                long weeks = days / 7;
+                status = weeks + " minggu yang lalu";
             } else {
-                tvJoinDate.setText("Bergabung: -");
+                // Tampilkan tanggal lengkap jika lebih dari 30 hari
+                status = outputFormat.format(lastActive) + " " + timeFormat.format(lastActive);
             }
 
-            // Set total played
-            tvTotalPlayed.setText("Total diputar: " + listener.getTotalPlayed() + " lagu");
+            return "Terakhir aktif: " + status;
 
-            // Set last active
-            Date lastActiveDate = parseSupabaseDate(listener.getLastActive());
-            if (lastActiveDate != null) {
-                tvLastActive.setText("Terakhir aktif: " + outputFormat.format(lastActiveDate));
-            } else {
-                tvLastActive.setText("Terakhir aktif: -");
-            }
+        } catch (ParseException e) {
+            return "Terakhir aktif: " + lastActiveStr;
+        }
+    }
+
+    // Helper method untuk cek apakah recently active (dalam 24 jam terakhir)
+    private boolean isRecentlyActive(String lastActiveStr) {
+        if (lastActiveStr == null || lastActiveStr.isEmpty()) {
+            return false;
+        }
+
+        try {
+            Date lastActive = inputFormat.parse(lastActiveStr.replace("Z", ""));
+            Date now = new Date();
+
+            long diffInMillis = now.getTime() - lastActive.getTime();
+            long hours = TimeUnit.MILLISECONDS.toHours(diffInMillis);
+
+            return hours < 24; // Active dalam 24 jam terakhir
+
+        } catch (ParseException e) {
+            return false;
+        }
+    }
+
+    static class ViewHolder extends RecyclerView.ViewHolder {
+        MaterialCardView cardView;
+        TextView tvName, tvEmail, tvJoinDate, tvTotalPlayed, tvLastActive;
+
+        ViewHolder(View view) {
+            super(view);
+            cardView = view.findViewById(R.id.card_listener);
+            tvName = view.findViewById(R.id.tv_listener_name);
+            tvEmail = view.findViewById(R.id.tv_listener_email);
+            tvJoinDate = view.findViewById(R.id.tv_join_date);
+            tvTotalPlayed = view.findViewById(R.id.tv_total_played);
+            tvLastActive = view.findViewById(R.id.tv_last_active);
         }
     }
 }

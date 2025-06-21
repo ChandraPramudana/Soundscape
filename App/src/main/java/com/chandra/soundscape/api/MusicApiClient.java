@@ -548,7 +548,7 @@ public class MusicApiClient {
     public void getStatistics(ApiCallback<Statistics> callback) {
         Log.d(TAG, "=== GETTING STATISTICS ===");
 
-        // Get total users with proper count
+        // Get total users from 'users' table
         Call<List<JsonObject>> usersCall = apiService.getTotalUsers("id");
         usersCall.enqueue(new Callback<List<JsonObject>>() {
             @Override
@@ -556,12 +556,11 @@ public class MusicApiClient {
                 int userCount = 0;
 
                 if (response.isSuccessful()) {
-                    // Method 1: Try getting count from Content-Range header
+                    // Try getting count from Content-Range header
                     String contentRange = response.headers().get("content-range");
                     Log.d(TAG, "Users Content-Range: " + contentRange);
 
                     if (contentRange != null) {
-                        // Format: "0-9/100" or "*/100"
                         String[] parts = contentRange.split("/");
                         if (parts.length > 1) {
                             try {
@@ -573,25 +572,18 @@ public class MusicApiClient {
                         }
                     }
 
-                    // Method 2: If no count in header, use response body size
+                    // If no count in header, use response body size
                     if (userCount == 0 && response.body() != null) {
                         userCount = response.body().size();
                         Log.d(TAG, "✅ Total users from body size: " + userCount);
                     }
                 } else {
                     Log.e(TAG, "❌ Failed to get users: " + response.code() + " " + response.message());
-                    try {
-                        if (response.errorBody() != null) {
-                            Log.e(TAG, "Error body: " + response.errorBody().string());
-                        }
-                    } catch (Exception e) {
-                        Log.e(TAG, "Error reading error body", e);
-                    }
                 }
 
                 final int finalUserCount = userCount;
 
-                // Now get total music tracks
+                // Get total music tracks
                 Call<List<JsonObject>> musicCall = apiService.getTotalMusic("id", "eq.true");
                 musicCall.enqueue(new Callback<List<JsonObject>>() {
                     @Override
@@ -599,7 +591,6 @@ public class MusicApiClient {
                         int musicCount = 0;
 
                         if (response.isSuccessful()) {
-                            // Method 1: Try getting count from Content-Range header
                             String contentRange = response.headers().get("content-range");
                             Log.d(TAG, "Music Content-Range: " + contentRange);
 
@@ -615,7 +606,6 @@ public class MusicApiClient {
                                 }
                             }
 
-                            // Method 2: If no count in header, use response body size
                             if (musicCount == 0 && response.body() != null) {
                                 musicCount = response.body().size();
                                 Log.d(TAG, "✅ Total music from body size: " + musicCount);
@@ -818,72 +808,105 @@ public class MusicApiClient {
     }
 
     public void getUserProfiles(ApiCallback<List<ListenerListFragment.Listener>> callback) {
-        Log.d(TAG, "=== GETTING USER PROFILES (SIMPLE VERSION) ===");
+        Log.d(TAG, "=== GETTING LISTENERS FROM USERS TABLE ===");
 
-        // Direct HTTP call
-        String url = SUPABASE_URL + "/rest/v1/user_profiles?select=*&order=created_at.desc";
+        // Query ke tabel 'users' sesuai dengan skema database Anda
+        String select = "id,email,name,role,created_at,last_login,total_listening_time";
+        String order = "created_at.desc";
 
-        OkHttpClient client = new OkHttpClient.Builder()
-                .connectTimeout(10, TimeUnit.SECONDS)
-                .build();
-
-        Request request = new Request.Builder()
-                .url(url)
-                .addHeader("apikey", SUPABASE_ANON_KEY)
-                .addHeader("Authorization", "Bearer " + SUPABASE_ANON_KEY)
-                .build();
-
-        client.newCall(request).enqueue(new okhttp3.Callback() {
+        // Gunakan endpoint yang benar untuk tabel users
+        apiService.getListeners(select, order).enqueue(new Callback<List<JsonObject>>() {
             @Override
-            public void onFailure(okhttp3.Call call, IOException e) {
-                Log.e(TAG, "Request failed", e);
-                callback.onError("Network error: " + e.getMessage());
+            public void onResponse(Call<List<JsonObject>> call, Response<List<JsonObject>> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    try {
+                        List<JsonObject> usersData = response.body();
+                        List<ListenerListFragment.Listener> listeners = new ArrayList<>();
+
+                        Log.d(TAG, "✅ Received " + usersData.size() + " users from database");
+
+                        for (JsonObject userData : usersData) {
+                            // Filter hanya role "Listener" (bukan admin atau doctor)
+                            String role = userData.has("role") && !userData.get("role").isJsonNull()
+                                    ? userData.get("role").getAsString()
+                                    : "Listener";
+
+                            if (!role.equalsIgnoreCase("Listener")) {
+                                continue; // Skip non-listener users
+                            }
+
+                            ListenerListFragment.Listener listener = new ListenerListFragment.Listener();
+
+                            // Map fields dari tabel users ke Listener model
+                            listener.setId(userData.has("id") ? userData.get("id").getAsString() : "");
+                            listener.setEmail(userData.has("email") ? userData.get("email").getAsString() : "");
+                            listener.setName(userData.has("name") ? userData.get("name").getAsString() : "User");
+
+                            // Format tanggal
+                            String createdAt = userData.has("created_at") ? userData.get("created_at").getAsString() : "";
+                            listener.setJoinDate(createdAt);
+
+                            // Total listening time sebagai total played (dalam menit)
+                            int totalListeningTime = userData.has("total_listening_time") && !userData.get("total_listening_time").isJsonNull()
+                                    ? userData.get("total_listening_time").getAsInt()
+                                    : 0;
+                            listener.setTotalPlayed(totalListeningTime / 60); // Convert seconds to minutes
+
+                            // Last login sebagai last active
+                            String lastLogin = userData.has("last_login") && !userData.get("last_login").isJsonNull()
+                                    ? userData.get("last_login").getAsString()
+                                    : createdAt; // Default ke created_at jika belum pernah login
+                            listener.setLastActive(lastLogin);
+
+                            listeners.add(listener);
+                            Log.d(TAG, "Added listener: " + listener.getName() + " (" + listener.getEmail() + ")");
+                        }
+
+                        Log.d(TAG, "✅ Successfully loaded " + listeners.size() + " listeners");
+                        callback.onSuccess(listeners);
+
+                    } catch (Exception e) {
+                        Log.e(TAG, "Error parsing listeners data", e);
+                        callback.onError("Error parsing data: " + e.getMessage());
+                    }
+                } else {
+                    String errorMsg = "Failed to get listeners: HTTP " + response.code();
+                    try {
+                        if (response.errorBody() != null) {
+                            String errorBody = response.errorBody().string();
+                            Log.e(TAG, "Error body: " + errorBody);
+
+                            // Handle specific errors
+                            if (errorBody.contains("relation") && errorBody.contains("does not exist")) {
+                                errorMsg = "Tabel 'users' tidak ditemukan di database";
+                            } else if (errorBody.contains("permission denied")) {
+                                errorMsg = "Akses ditolak. Periksa RLS Policy untuk tabel users";
+                            } else {
+                                errorMsg += " - " + errorBody;
+                            }
+                        }
+                    } catch (Exception e) {
+                        Log.e(TAG, "Error reading error body", e);
+                    }
+                    callback.onError(errorMsg);
+                }
             }
 
             @Override
-            public void onResponse(okhttp3.Call call, okhttp3.Response response) throws IOException {
-                try {
-                    if (!response.isSuccessful()) {
-                        callback.onError("HTTP " + response.code());
-                        return;
+            public void onFailure(Call<List<JsonObject>> call, Throwable t) {
+                Log.e(TAG, "=== GET LISTENERS FAILURE ===", t);
+
+                String errorMessage = t.getMessage();
+                if (errorMessage != null) {
+                    if (errorMessage.contains("Unable to resolve host")) {
+                        callback.onError("❌ Tidak dapat terhubung ke server. Periksa koneksi internet.");
+                    } else if (errorMessage.contains("timeout")) {
+                        callback.onError("❌ Koneksi timeout. Coba lagi.");
+                    } else {
+                        callback.onError("❌ Network error: " + errorMessage);
                     }
-
-                    String jsonData = response.body().string();
-                    Log.d(TAG, "Response received, length: " + jsonData.length());
-
-                    // Parse JSON manually
-                    List<ListenerListFragment.Listener> listeners = new ArrayList<>();
-
-                    JSONArray jsonArray = new JSONArray(jsonData);
-                    Log.d(TAG, "Parsed " + jsonArray.length() + " profiles");
-
-                    for (int i = 0; i < jsonArray.length(); i++) {
-                        JSONObject obj = jsonArray.getJSONObject(i);
-
-                        ListenerListFragment.Listener listener = new ListenerListFragment.Listener();
-
-                        listener.setId(obj.optString("id", ""));
-                        listener.setEmail(obj.optString("email", ""));
-                        listener.setName(obj.optString("name", ""));
-                        listener.setJoinDate(obj.optString("created_at", ""));
-                        listener.setTotalPlayed(obj.optInt("total_played", 0));
-                        listener.setLastActive(obj.optString("last_active", obj.optString("created_at", "")));
-
-                        // Fix empty name
-                        if (listener.getName().isEmpty() && listener.getEmail().contains("@")) {
-                            listener.setName(listener.getEmail().split("@")[0]);
-                        }
-
-                        listeners.add(listener);
-                        Log.d(TAG, "Added: " + listener.getName() + " (" + listener.getEmail() + ")");
-                    }
-
-                    Log.d(TAG, "✅ Total parsed: " + listeners.size() + " listeners");
-                    callback.onSuccess(listeners);
-
-                } catch (Exception e) {
-                    Log.e(TAG, "Parse error", e);
-                    callback.onError("Parse error: " + e.getMessage());
+                } else {
+                    callback.onError("❌ Terjadi kesalahan jaringan");
                 }
             }
         });

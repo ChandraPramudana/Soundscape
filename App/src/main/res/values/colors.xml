@@ -44,4 +44,15 @@
     <color name="success_light">#E8F5E8</color>
     <color name="info">#2196F3</color>
 
+    //notif
+    <color name="notification_unread_bg">#F5F9FF</color>
+
+    <color name="badge_recommendation_bg">#E3F2FD</color>
+    <color name="badge_approval_bg">#E8F5E9</color>
+    <color name="badge_approval_text">#4CAF50</color>
+    <color name="badge_rejection_bg">#FFEBEE</color>
+    <color name="badge_rejection_text">#F44336</color>
+    <color name="badge_default_bg">#F5F5F5</color>
+    <color name="badge_default_text">#757575</color>
+
 </resources>
