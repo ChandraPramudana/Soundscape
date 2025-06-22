@@ -35,10 +35,10 @@ import java.util.Locale;
 public class AdminHomeFragment extends Fragment {
 
     // UI Components
-    private TextView tvWelcome, tvTotalUsers, tvTotalMusic, tvLastUpdate;
-    private MaterialCardView cardUploadMusic, cardManageMusic, cardTotalUsers, cardTotalMusic;
+    private TextView tvWelcome, tvTotalUsers, tvTotalMusic, tvTotalDoctors, tvLastUpdate;
+    private MaterialCardView cardUploadMusic, cardManageMusic, cardTotalUsers, cardTotalMusic, cardTotalDoctors;
     private SwipeRefreshLayout swipeRefreshLayout;
-    private ProgressBar progressUsers, progressMusic;
+    private ProgressBar progressUsers, progressMusic, progressDoctors;
 
     // API & Auth
     private MusicApiClient musicApiClient;
@@ -75,14 +75,17 @@ public class AdminHomeFragment extends Fragment {
         tvWelcome = view.findViewById(R.id.tv_welcome);
         tvTotalUsers = view.findViewById(R.id.tv_total_users);
         tvTotalMusic = view.findViewById(R.id.tv_total_music);
+        tvTotalDoctors = view.findViewById(R.id.tv_total_doctors);
         tvLastUpdate = view.findViewById(R.id.tv_last_update);
         cardUploadMusic = view.findViewById(R.id.card_upload_music);
         cardManageMusic = view.findViewById(R.id.card_manage_music);
         cardTotalUsers = view.findViewById(R.id.card_total_users);
         cardTotalMusic = view.findViewById(R.id.card_total_music);
+        cardTotalDoctors = view.findViewById(R.id.card_total_doctors);
         swipeRefreshLayout = view.findViewById(R.id.swipe_refresh);
         progressUsers = view.findViewById(R.id.progress_users);
         progressMusic = view.findViewById(R.id.progress_music);
+        progressDoctors = view.findViewById(R.id.progress_doctors);
 
         // Set welcome message
         setWelcomeMessage();
@@ -157,6 +160,18 @@ public class AdminHomeFragment extends Fragment {
             });
         }
 
+        // Total Doctors card - Navigate to Doctor List
+        if (cardTotalDoctors != null) {
+            cardTotalDoctors.setOnClickListener(v -> {
+                // Navigate to doctor list fragment
+                getParentFragmentManager()
+                        .beginTransaction()
+                        .replace(R.id.fragment_container, new DoctorListFragment())
+                        .addToBackStack(null)
+                        .commit();
+            });
+        }
+
         // Upload music card
         cardUploadMusic.setOnClickListener(v -> {
             // Navigate to upload fragment
@@ -203,9 +218,9 @@ public class AdminHomeFragment extends Fragment {
         showLoading(true);
 
         // Get statistics from API using the improved method
-        musicApiClient.getStatistics(new MusicApiClient.ApiCallback<MusicApiClient.Statistics>() {
+        musicApiClient.getStatisticsWithDoctors(new MusicApiClient.ApiCallback<MusicApiClient.StatisticsWithDoctors>() {
             @Override
-            public void onSuccess(MusicApiClient.Statistics statistics) {
+            public void onSuccess(MusicApiClient.StatisticsWithDoctors statistics) {
                 if (getActivity() != null && isAdded()) {
                     getActivity().runOnUiThread(() -> {
                         // Update UI with animation
@@ -404,10 +419,11 @@ public class AdminHomeFragment extends Fragment {
         dialog.show(getChildFragmentManager(), "recommendation_detail");
     }
 
-    private void updateStatisticsUI(MusicApiClient.Statistics statistics) {
+    private void updateStatisticsUI(MusicApiClient.StatisticsWithDoctors statistics) {
         // Animate number changes
         animateNumberChange(tvTotalUsers, statistics.getTotalUsers());
         animateNumberChange(tvTotalMusic, statistics.getTotalMusic());
+        animateNumberChange(tvTotalDoctors, statistics.getTotalDoctors());
     }
 
     private void animateNumberChange(TextView textView, int newValue) {
@@ -448,6 +464,9 @@ public class AdminHomeFragment extends Fragment {
         if (progressMusic != null) {
             progressMusic.setVisibility(show ? View.VISIBLE : View.GONE);
         }
+        if (progressDoctors != null) {
+            progressDoctors.setVisibility(show ? View.VISIBLE : View.GONE);
+        }
 
         // Dim the text while loading
         if (tvTotalUsers != null) {
@@ -455,6 +474,9 @@ public class AdminHomeFragment extends Fragment {
         }
         if (tvTotalMusic != null) {
             tvTotalMusic.setAlpha(show ? 0.5f : 1f);
+        }
+        if (tvTotalDoctors != null) {
+            tvTotalDoctors.setAlpha(show ? 0.5f : 1f);
         }
     }
 

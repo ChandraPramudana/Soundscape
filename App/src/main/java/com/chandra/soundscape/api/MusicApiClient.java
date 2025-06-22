@@ -2,6 +2,7 @@ package com.chandra.soundscape.api;
 
 import android.util.Log;
 
+import com.chandra.soundscape.admin.DoctorListFragment;
 import com.chandra.soundscape.admin.ListenerListFragment;
 import com.chandra.soundscape.models.MusicTrack;
 import com.google.gson.Gson;
@@ -104,6 +105,11 @@ public class MusicApiClient {
         @PATCH("rest/v1/music_tracks")
         Call<ResponseBody> deleteMusic(@Query("id") String id,
                                        @Body JsonObject updateBody);
+
+        @GET("rest/v1/users")
+        Call<List<JsonObject>> getDoctors(@Query("select") String select,
+                                          @Query("role") String role,
+                                          @Query("order") String order);
     }
 
     // Constructor
@@ -1237,6 +1243,256 @@ public class MusicApiClient {
             }
         });
     }
+
+    public void getStatisticsWithDoctors(ApiCallback<StatisticsWithDoctors> callback) {
+        Log.d(TAG, "=== GETTING STATISTICS WITH DOCTORS ===");
+
+        // Get total users from 'users' table
+        Call<List<JsonObject>> usersCall = apiService.getTotalUsers("id");
+        usersCall.enqueue(new Callback<List<JsonObject>>() {
+            @Override
+            public void onResponse(Call<List<JsonObject>> call, Response<List<JsonObject>> response) {
+                int userCount = 0;
+
+                if (response.isSuccessful()) {
+                    // Try getting count from Content-Range header
+                    String contentRange = response.headers().get("content-range");
+                    Log.d(TAG, "Users Content-Range: " + contentRange);
+
+                    if (contentRange != null) {
+                        String[] parts = contentRange.split("/");
+                        if (parts.length > 1) {
+                            try {
+                                userCount = Integer.parseInt(parts[1]);
+                                Log.d(TAG, "✅ Total users from header: " + userCount);
+                            } catch (NumberFormatException e) {
+                                Log.e(TAG, "Error parsing user count from header", e);
+                            }
+                        }
+                    }
+
+                    // If no count in header, use response body size
+                    if (userCount == 0 && response.body() != null) {
+                        userCount = response.body().size();
+                        Log.d(TAG, "✅ Total users from body size: " + userCount);
+                    }
+                } else {
+                    Log.e(TAG, "❌ Failed to get users: " + response.code() + " " + response.message());
+                }
+
+                final int finalUserCount = userCount;
+
+                // Get total music tracks
+                Call<List<JsonObject>> musicCall = apiService.getTotalMusic("id", "eq.true");
+                musicCall.enqueue(new Callback<List<JsonObject>>() {
+                    @Override
+                    public void onResponse(Call<List<JsonObject>> call, Response<List<JsonObject>> response) {
+                        int musicCount = 0;
+
+                        if (response.isSuccessful()) {
+                            String contentRange = response.headers().get("content-range");
+                            Log.d(TAG, "Music Content-Range: " + contentRange);
+
+                            if (contentRange != null) {
+                                String[] parts = contentRange.split("/");
+                                if (parts.length > 1) {
+                                    try {
+                                        musicCount = Integer.parseInt(parts[1]);
+                                        Log.d(TAG, "✅ Total music from header: " + musicCount);
+                                    } catch (NumberFormatException e) {
+                                        Log.e(TAG, "Error parsing music count from header", e);
+                                    }
+                                }
+                            }
+
+                            if (musicCount == 0 && response.body() != null) {
+                                musicCount = response.body().size();
+                                Log.d(TAG, "✅ Total music from body size: " + musicCount);
+                            }
+                        } else {
+                            Log.e(TAG, "❌ Failed to get music: " + response.code() + " " + response.message());
+                        }
+
+                        final int finalMusicCount = musicCount;
+
+                        // Get all users and count doctors
+                        Call<List<JsonObject>> allUsersCall = apiService.getListeners("id,role", "created_at.desc");
+                        allUsersCall.enqueue(new Callback<List<JsonObject>>() {
+                            @Override
+                            public void onResponse(Call<List<JsonObject>> call, Response<List<JsonObject>> response) {
+                                int doctorCount = 0;
+
+                                if (response.isSuccessful() && response.body() != null) {
+                                    // Count users with role = 'Doctor'
+                                    for (JsonObject user : response.body()) {
+                                        if (user.has("role") && !user.get("role").isJsonNull()) {
+                                            String role = user.get("role").getAsString();
+                                            if ("Dokter".equalsIgnoreCase(role)) {
+                                                doctorCount++;
+                                            }
+                                        }
+                                    }
+                                    Log.d(TAG, "✅ Total doctors counted: " + doctorCount);
+                                } else {
+                                    Log.e(TAG, "❌ Failed to get users for doctor count: " + response.code());
+                                }
+
+                                // Return statistics
+                                StatisticsWithDoctors stats = new StatisticsWithDoctors(finalUserCount, finalMusicCount, doctorCount);
+                                Log.d(TAG, "=== STATISTICS RESULT ===");
+                                Log.d(TAG, "Total Users: " + stats.getTotalUsers());
+                                Log.d(TAG, "Total Music: " + stats.getTotalMusic());
+                                Log.d(TAG, "Total Doctors: " + stats.getTotalDoctors());
+
+                                callback.onSuccess(stats);
+                            }
+
+                            @Override
+                            public void onFailure(Call<List<JsonObject>> call, Throwable t) {
+                                Log.e(TAG, "❌ Network error getting doctor count", t);
+                                // Return stats without doctor count
+                                StatisticsWithDoctors stats = new StatisticsWithDoctors(finalUserCount, finalMusicCount, 0);
+                                callback.onSuccess(stats);
+                            }
+                        });
+                    }
+
+                    @Override
+                    public void onFailure(Call<List<JsonObject>> call, Throwable t) {
+                        Log.e(TAG, "❌ Network error getting music count", t);
+                        callback.onError("Failed to get music count: " + t.getMessage());
+                    }
+                });
+            }
+
+            @Override
+            public void onFailure(Call<List<JsonObject>> call, Throwable t) {
+                Log.e(TAG, "❌ Network error getting user count", t);
+                callback.onError("Failed to get user count: " + t.getMessage());
+            }
+        });
+    }
+
+    public void getDoctorProfiles(ApiCallback<List<DoctorListFragment.Doctor>> callback) {
+        Log.d(TAG, "=== GETTING DOCTORS FROM USERS TABLE ===");
+
+        // Query ke tabel 'users' sesuai dengan skema database Anda
+        String select = "id,email,name,role,created_at,last_login,total_listening_time";
+        String order = "created_at.desc";
+
+        // Gunakan endpoint yang benar untuk tabel users
+        apiService.getListeners(select, order).enqueue(new Callback<List<JsonObject>>() {
+            @Override
+            public void onResponse(Call<List<JsonObject>> call, Response<List<JsonObject>> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    try {
+                        List<JsonObject> usersData = response.body();
+                        List<DoctorListFragment.Doctor> doctors = new ArrayList<>();
+
+                        Log.d(TAG, "✅ Received " + usersData.size() + " users from database");
+
+                        for (JsonObject userData : usersData) {
+                            // Filter hanya role "Doctor"
+                            String role = userData.has("role") && !userData.get("role").isJsonNull()
+                                    ? userData.get("role").getAsString()
+                                    : "";
+
+                            if (!role.equalsIgnoreCase("Dokter")) {
+                                continue; // Skip non-doctor users
+                            }
+
+                            DoctorListFragment.Doctor doctor = new DoctorListFragment.Doctor();
+
+                            // Map fields dari tabel users ke Doctor model
+                            doctor.setId(userData.has("id") ? userData.get("id").getAsString() : "");
+                            doctor.setEmail(userData.has("email") ? userData.get("email").getAsString() : "");
+
+                            String name = userData.has("name") ? userData.get("name").getAsString() : "User";
+                            // Add Dr. prefix if not exists
+                            if (!name.startsWith("Dr.") && !name.startsWith("dr.")) {
+                                name = "Dr. " + name;
+                            }
+                            doctor.setName(name);
+
+                            // Format tanggal
+                            String createdAt = userData.has("created_at") ? userData.get("created_at").getAsString() : "";
+                            doctor.setJoinDate(createdAt);
+
+                            // Total recommendations (for now set to 0, can be implemented later)
+                            doctor.setTotalRecommendations(0);
+
+                            // Last login sebagai last active
+                            String lastLogin = userData.has("last_login") && !userData.get("last_login").isJsonNull()
+                                    ? userData.get("last_login").getAsString()
+                                    : createdAt; // Default ke created_at jika belum pernah login
+                            doctor.setLastActive(lastLogin);
+
+                            doctors.add(doctor);
+                            Log.d(TAG, "Added doctor: " + doctor.getName() + " (" + doctor.getEmail() + ")");
+                        }
+
+                        Log.d(TAG, "✅ Successfully loaded " + doctors.size() + " doctors");
+                        callback.onSuccess(doctors);
+
+                    } catch (Exception e) {
+                        Log.e(TAG, "Error parsing doctors data", e);
+                        callback.onError("Error parsing data: " + e.getMessage());
+                    }
+                } else {
+                    String errorMsg = "Failed to get doctors: HTTP " + response.code();
+                    try {
+                        if (response.errorBody() != null) {
+                            String errorBody = response.errorBody().string();
+                            Log.e(TAG, "Error body: " + errorBody);
+
+                            // Handle specific errors
+                            if (errorBody.contains("relation") && errorBody.contains("does not exist")) {
+                                errorMsg = "Tabel 'users' tidak ditemukan di database";
+                            } else if (errorBody.contains("permission denied")) {
+                                errorMsg = "Akses ditolak. Periksa RLS Policy untuk tabel users";
+                            } else {
+                                errorMsg += " - " + errorBody;
+                            }
+                        }
+                    } catch (Exception e) {
+                        Log.e(TAG, "Error reading error body", e);
+                    }
+                    callback.onError(errorMsg);
+                }
+            }
+
+            @Override
+            public void onFailure(Call<List<JsonObject>> call, Throwable t) {
+                Log.e(TAG, "=== GET DOCTORS FAILURE ===", t);
+
+                String errorMessage = t.getMessage();
+                if (errorMessage != null) {
+                    if (errorMessage.contains("Unable to resolve host")) {
+                        callback.onError("❌ Tidak dapat terhubung ke server. Periksa koneksi internet.");
+                    } else if (errorMessage.contains("timeout")) {
+                        callback.onError("❌ Koneksi timeout. Coba lagi.");
+                    } else {
+                        callback.onError("❌ Network error: " + errorMessage);
+                    }
+                } else {
+                    callback.onError("❌ Terjadi kesalahan jaringan");
+                }
+            }
+        });
+    }
+
+    public static class StatisticsWithDoctors extends Statistics {
+        private int totalDoctors;
+
+        public StatisticsWithDoctors(int totalUsers, int totalMusic, int totalDoctors) {
+            super(totalUsers, totalMusic);
+            this.totalDoctors = totalDoctors;
+        }
+
+        public int getTotalDoctors() { return totalDoctors; }
+        public void setTotalDoctors(int totalDoctors) { this.totalDoctors = totalDoctors; }
+    }
+
 
     // Add this class if you want more detailed stats
     public static class DetailedStatistics extends Statistics {

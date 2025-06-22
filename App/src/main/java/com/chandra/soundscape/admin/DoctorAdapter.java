@@ -15,46 +15,46 @@ import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
-public class ListenerAdapter extends RecyclerView.Adapter<ListenerAdapter.ViewHolder> {
+public class DoctorAdapter extends RecyclerView.Adapter<DoctorAdapter.ViewHolder> {
 
-    private List<ListenerListFragment.Listener> listenerList;
+    private List<DoctorListFragment.Doctor> doctorList;
     private SimpleDateFormat inputFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault());
     private SimpleDateFormat outputFormat = new SimpleDateFormat("dd MMM yyyy", new Locale("id", "ID"));
     private SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm", new Locale("id", "ID"));
 
-    public ListenerAdapter(List<ListenerListFragment.Listener> listenerList) {
-        this.listenerList = listenerList;
+    public DoctorAdapter(List<DoctorListFragment.Doctor> doctorList) {
+        this.doctorList = doctorList;
     }
 
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.item_listener, parent, false);
+                .inflate(R.layout.item_doctor, parent, false);
         return new ViewHolder(view);
     }
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        ListenerListFragment.Listener listener = listenerList.get(position);
+        DoctorListFragment.Doctor doctor = doctorList.get(position);
 
         // Set nama
-        holder.tvName.setText(listener.getName());
+        holder.tvName.setText(doctor.getName());
 
         // Set email
-        holder.tvEmail.setText(listener.getEmail());
+        holder.tvEmail.setText(doctor.getEmail());
 
         // Format dan set tanggal bergabung
-        String joinDate = formatDate(listener.getJoinDate());
+        String joinDate = formatDate(doctor.getJoinDate());
         holder.tvJoinDate.setText("Bergabung: " + joinDate);
 
         // Format dan set last active dengan status
-        String lastActiveText = formatLastActive(listener.getLastActive());
+        String lastActiveText = formatLastActive(doctor.getLastActive());
         holder.tvLastActive.setText(lastActiveText);
 
         // Set warna berdasarkan aktivitas terakhir
-        if (isRecentlyActive(listener.getLastActive())) {
-            holder.cardView.setCardBackgroundColor(holder.itemView.getContext().getColor(R.color.success));
+        if (isRecentlyActive(doctor.getLastActive())) {
+            holder.cardView.setCardBackgroundColor(holder.itemView.getContext().getColor(R.color.white));
         } else {
             holder.cardView.setCardBackgroundColor(holder.itemView.getContext().getColor(R.color.white));
         }
@@ -62,7 +62,7 @@ public class ListenerAdapter extends RecyclerView.Adapter<ListenerAdapter.ViewHo
 
     @Override
     public int getItemCount() {
-        return listenerList != null ? listenerList.size() : 0;
+        return doctorList != null ? doctorList.size() : 0;
     }
 
     // Helper method untuk format tanggal
@@ -83,22 +83,6 @@ public class ListenerAdapter extends RecyclerView.Adapter<ListenerAdapter.ViewHo
             } catch (ParseException e2) {
                 return dateStr; // Return original if parsing fails
             }
-        }
-    }
-
-    // Helper method untuk format waktu putar
-    private String formatPlayTime(int totalMinutes) {
-        if (totalMinutes == 0) {
-            return "0 menit";
-        }
-
-        int hours = totalMinutes / 60;
-        int minutes = totalMinutes % 60;
-
-        if (hours > 0) {
-            return String.format(Locale.getDefault(), "%d jam %d menit", hours, minutes);
-        } else {
-            return String.format(Locale.getDefault(), "%d menit", minutes);
         }
     }
 
@@ -161,14 +145,15 @@ public class ListenerAdapter extends RecyclerView.Adapter<ListenerAdapter.ViewHo
 
     static class ViewHolder extends RecyclerView.ViewHolder {
         MaterialCardView cardView;
-        TextView tvName, tvEmail, tvJoinDate, tvTotalPlayed, tvLastActive;
+        TextView tvName, tvEmail, tvJoinDate, tvTotalRecommendations, tvLastActive;
 
         ViewHolder(View view) {
             super(view);
-            cardView = view.findViewById(R.id.card_listener);
-            tvName = view.findViewById(R.id.tv_listener_name);
-            tvEmail = view.findViewById(R.id.tv_listener_email);
+            cardView = view.findViewById(R.id.card_doctor);
+            tvName = view.findViewById(R.id.tv_doctor_name);
+            tvEmail = view.findViewById(R.id.tv_doctor_email);
             tvJoinDate = view.findViewById(R.id.tv_join_date);
+            tvTotalRecommendations = view.findViewById(R.id.tv_total_recommendations);
             tvLastActive = view.findViewById(R.id.tv_last_active);
         }
     }
