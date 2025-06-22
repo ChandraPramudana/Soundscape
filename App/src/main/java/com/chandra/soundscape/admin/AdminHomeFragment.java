@@ -1,24 +1,35 @@
 package com.chandra.soundscape.admin;
 
+import static android.content.ContentValues.TAG;
+
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.text.TextUtils;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.Fragment;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 import com.chandra.soundscape.R;
 import com.chandra.soundscape.SupabaseAuthManager;
 import com.chandra.soundscape.api.MusicApiClient;
+import com.chandra.soundscape.doctor.DoctorRecommendationDetailDialog;
+import com.chandra.soundscape.models.MusicTrack;
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 
 public class AdminHomeFragment extends Fragment {
@@ -55,6 +66,7 @@ public class AdminHomeFragment extends Fragment {
 
         // Load statistics on create
         loadStatistics(false);
+        loadDoctorRecommendations();
 
         return view;
     }
@@ -240,6 +252,156 @@ public class AdminHomeFragment extends Fragment {
                 }
             }
         });
+    }
+
+    private void loadDoctorRecommendations() {
+        Log.d(TAG, "=== LOADING DOCTOR RECOMMENDATIONS ===");
+
+        // Get pending doctor recommendations
+        musicApiClient.getPendingDoctorRecommendations(new MusicApiClient.ApiCallback<List<MusicTrack>>() {
+            @Override
+            public void onSuccess(List<MusicTrack> recommendations) {
+                if (getActivity() != null && isAdded()) {
+                    getActivity().runOnUiThread(() -> {
+                        // Update UI dengan rekomendasi dokter
+                        updateDoctorRecommendationsUI(recommendations);
+                    });
+                }
+            }
+
+            @Override
+            public void onError(String error) {
+                Log.e(TAG, "Error loading doctor recommendations: " + error);
+            }
+        });
+    }
+
+    private void updateDoctorRecommendationsUI(List<MusicTrack> recommendations) {
+        // Hapus card rekomendasi yang sudah ada
+        LinearLayout container = getView().findViewById(R.id.container_recommendations);
+        if (container != null) {
+            container.removeAllViews();
+        }
+
+        // Tambahkan card untuk setiap rekomendasi
+        for (MusicTrack music : recommendations) {
+            View recommendationCard = createRecommendationCard(music);
+            if (recommendationCard != null && container != null) {
+                container.addView(recommendationCard);
+            }
+        }
+    }
+
+    private View createRecommendationCard(MusicTrack music) {
+        // Inflate card layout
+        View cardView = LayoutInflater.from(getContext()).inflate(R.layout.item_doctor_recommendation_admin, null, false);
+
+        // Set data
+        TextView tvTitle = cardView.findViewById(R.id.tv_title);
+        TextView tvDoctor = cardView.findViewById(R.id.tv_doctor_name);
+        TextView tvCategory = cardView.findViewById(R.id.tv_category);
+        TextView tvJournal = cardView.findViewById(R.id.tv_journal);
+        MaterialButton btnAccept = cardView.findViewById(R.id.btn_accept);
+        MaterialButton btnReject = cardView.findViewById(R.id.btn_reject);
+        MaterialButton btnDetail = cardView.findViewById(R.id.btn_detail);
+
+        tvTitle.setText(music.getTitle());
+        tvDoctor.setText("Dr. " + music.getDoctorName());
+        tvCategory.setText(music.getCategory());
+        tvJournal.setText(music.getJournalReference());
+
+        // Set click listeners
+        btnAccept.setOnClickListener(v -> acceptRecommendation(music));
+        btnReject.setOnClickListener(v -> showRejectDialog(music));
+        btnDetail.setOnClickListener(v -> showDetailDialog(music));
+
+        // Set margin
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        params.setMargins(0, 0, 0, 16);
+        cardView.setLayoutParams(params);
+
+        return cardView;
+    }
+
+    private void acceptRecommendation(MusicTrack music) {
+        String adminId = authManager.getCurrentUserId();
+
+        musicApiClient.approveRecommendation(music.getId(), adminId, new MusicApiClient.ApiCallback<Void>() {
+            @Override
+            public void onSuccess(Void result) {
+                if (getActivity() != null && isAdded()) {
+                    getActivity().runOnUiThread(() -> {
+                        Toast.makeText(getContext(), "✅ Rekomendasi diterima", Toast.LENGTH_SHORT).show();
+                        // Reload recommendations
+                        loadDoctorRecommendations();
+                        loadStatistics(false);
+                    });
+                }
+            }
+
+            @Override
+            public void onError(String error) {
+                if (getActivity() != null && isAdded()) {
+                    getActivity().runOnUiThread(() -> {
+                        Toast.makeText(getContext(), "❌ Gagal menerima rekomendasi: " + error, Toast.LENGTH_SHORT).show();
+                    });
+                }
+            }
+        });
+    }
+
+    private void showRejectDialog(MusicTrack music) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
+        View dialogView = LayoutInflater.from(getContext()).inflate(R.layout.dialog_reject_recommendation, null);
+
+        EditText etReason = dialogView.findViewById(R.id.et_rejection_reason);
+
+        builder.setView(dialogView)
+                .setTitle("Tolak Rekomendasi")
+                .setPositiveButton("Tolak", (dialog, which) -> {
+                    String reason = etReason.getText().toString().trim();
+                    if (TextUtils.isEmpty(reason)) {
+                        Toast.makeText(getContext(), "Alasan penolakan harus diisi", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    rejectRecommendation(music, reason);
+                })
+                .setNegativeButton("Batal", null)
+                .show();
+    }
+
+    private void rejectRecommendation(MusicTrack music, String reason) {
+        String adminId = authManager.getCurrentUserId();
+
+        musicApiClient.rejectRecommendation(music.getId(), adminId, reason, new MusicApiClient.ApiCallback<Void>() {
+            @Override
+            public void onSuccess(Void result) {
+                if (getActivity() != null && isAdded()) {
+                    getActivity().runOnUiThread(() -> {
+                        Toast.makeText(getContext(), "❌ Rekomendasi ditolak", Toast.LENGTH_SHORT).show();
+                        // Reload recommendations
+                        loadDoctorRecommendations();
+                    });
+                }
+            }
+
+            @Override
+            public void onError(String error) {
+                if (getActivity() != null && isAdded()) {
+                    getActivity().runOnUiThread(() -> {
+                        Toast.makeText(getContext(), "❌ Gagal menolak rekomendasi: " + error, Toast.LENGTH_SHORT).show();
+                    });
+                }
+            }
+        });
+    }
+
+    private void showDetailDialog(MusicTrack music) {
+        DoctorRecommendationDetailDialog dialog = new DoctorRecommendationDetailDialog(music);
+        dialog.show(getChildFragmentManager(), "recommendation_detail");
     }
 
     private void updateStatisticsUI(MusicApiClient.Statistics statistics) {

@@ -16,6 +16,7 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.chandra.soundscape.admin.AdminDashboardActivity;
+import com.chandra.soundscape.doctor.DoctorDashboardActivity;
 
 public class LoginActivity extends AppCompatActivity {
     private static final String TAG = "LoginActivity";
@@ -77,7 +78,7 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void setupSpinner() {
-        String[] roles = {"Pilih Role", "Listener", "Admin"};
+        String[] roles = {"Pilih Role", "Listener", "Admin", "Dokter"};
         ArrayAdapter<String> adapter = new ArrayAdapter<>(this,
                 android.R.layout.simple_spinner_item, roles);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
@@ -233,12 +234,16 @@ public class LoginActivity extends AppCompatActivity {
         switch (role) {
             case "Admin":
                 Log.d(TAG, "Navigating to Admin dashboard");
-                intent = new Intent(this, AdminDashboardActivity.class); // Admin dashboard
+                intent = new Intent(this, AdminDashboardActivity.class);
+                break;
+            case "Dokter":
+                Log.d(TAG, "Navigating to Doctor dashboard");
+                intent = new Intent(this, DoctorDashboardActivity.class); // Buat activity ini
                 break;
             case "Listener":
             default:
                 Log.d(TAG, "Navigating to Listener dashboard");
-                intent = new Intent(this, ListenerDashboardActivity.class); // Listener dashboard
+                intent = new Intent(this, ListenerDashboardActivity.class);
                 break;
         }
 

@@ -67,7 +67,7 @@ public class ProfileFragment extends Fragment {
         // Get current logged in user data
         if (sessionManager.isLoggedIn()) {
             UserData currentUser = sessionManager.getCurrentUser();
-            String userRole = sessionManager.getUserRole();
+
 
             // Set profile information
             tvUserName.setText(currentUser.getName());
@@ -75,7 +75,6 @@ public class ProfileFragment extends Fragment {
             tvMemberSince.setText("Bergabung sejak " + currentUser.getMemberSince());
 
             // Show role badge
-            showUserRole(userRole);
 
         } else {
             // If no user logged in, redirect to login

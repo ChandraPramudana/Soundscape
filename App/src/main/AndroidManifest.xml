@@ -47,6 +47,10 @@
         <activity
             android:name=".MusicPlayerActivity" />
 
+        <activity
+            android:name=".doctor.DoctorDashboardActivity"
+            android:label="Dashboard Dokter" />
+
     </application>
 
 </manifest>

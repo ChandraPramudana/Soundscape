@@ -49,6 +49,30 @@ public class MusicTrack implements Serializable {
     @SerializedName("play_count")
     private int playCount;
 
+    @SerializedName("uploaded_by_doctor")
+    private boolean uploadedByDoctor;
+
+    @SerializedName("doctor_approval_status")
+    private String doctorApprovalStatus;
+
+    @SerializedName("doctor_id")
+    private String doctorId;
+
+    @SerializedName("is_doctor_recommendation")
+    private boolean isDoctorRecommendation;
+
+    @SerializedName("approval_status")
+    private String approvalStatus;
+
+    @SerializedName("approved_by")
+    private String approvedBy;
+
+    @SerializedName("approved_at")
+    private String approvedAt;
+
+    @SerializedName("rejection_reason")
+    private String rejectionReason;
+
     // Constructor kosong
     public MusicTrack() {
         this.isActive = true;
@@ -98,6 +122,15 @@ public class MusicTrack implements Serializable {
     public boolean isActive() { return isActive; }
     public int getPlayCount() { return playCount; }
 
+    public boolean isUploadedByDoctor() { return uploadedByDoctor; }
+    public String getDoctorApprovalStatus() { return doctorApprovalStatus; }
+    public String getDoctorId() { return doctorId; }
+    public boolean isDoctorRecommendation() { return isDoctorRecommendation; }
+    public String getApprovalStatus() { return approvalStatus; }
+    public String getApprovedBy() { return approvedBy; }
+    public String getApprovedAt() { return approvedAt; }
+    public String getRejectionReason() { return rejectionReason; }
+
     // Setters
     public void setId(String id) { this.id = id; }
     public void setTitle(String title) { this.title = title; }
@@ -114,6 +147,15 @@ public class MusicTrack implements Serializable {
     public void setCreatedBy(String createdBy) { this.createdBy = createdBy; }
     public void setActive(boolean active) { isActive = active; }
     public void setPlayCount(int playCount) { this.playCount = playCount; }
+
+    public void setUploadedByDoctor(boolean uploadedByDoctor) { this.uploadedByDoctor = uploadedByDoctor; }
+    public void setDoctorApprovalStatus(String doctorApprovalStatus) { this.doctorApprovalStatus = doctorApprovalStatus; }
+    public void setDoctorId(String doctorId) { this.doctorId = doctorId; }
+    public void setIsDoctorRecommendation(boolean isDoctorRecommendation) { this.isDoctorRecommendation = isDoctorRecommendation; }
+    public void setApprovalStatus(String approvalStatus) { this.approvalStatus = approvalStatus; }
+    public void setApprovedBy(String approvedBy) { this.approvedBy = approvedBy; }
+    public void setApprovedAt(String approvedAt) { this.approvedAt = approvedAt; }
+    public void setRejectionReason(String rejectionReason) { this.rejectionReason = rejectionReason; }
 
     // Utility methods
     public boolean hasDoctor() {

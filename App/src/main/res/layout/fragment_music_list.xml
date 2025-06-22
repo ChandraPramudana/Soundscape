@@ -34,17 +34,6 @@
                     android:textStyle="bold"
                     android:textColor="@color/text_primary" />
 
-                <com.google.android.material.chip.Chip
-                    android:layout_width="wrap_content"
-                    android:layout_height="32dp"
-                    android:text="ADMIN"
-                    android:textSize="12sp"
-                    android:clickable="false"
-                    app:chipBackgroundColor="@color/colorPrimary"
-                    app:chipIcon="@drawable/ic_shield"
-                    app:chipIconTint="@android:color/white"
-                    android:textColor="@android:color/white" />
-
             </LinearLayout>
 
             <!-- Search Bar dengan Style Modern -->

@@ -202,7 +202,7 @@
 
             </LinearLayout>
 
-            <!-- Quick Actions -->
+            <!-- Quick Actions Section -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -211,7 +211,7 @@
                 android:textStyle="bold"
                 android:layout_marginBottom="12dp" />
 
-            <!-- Upload Music Button -->
+            <!-- Upload Music Card -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/card_upload_music"
                 android:layout_width="match_parent"
@@ -269,12 +269,12 @@
 
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Manage Music Button -->
+            <!-- Manage Music Card -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/card_manage_music"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
+                android:layout_marginBottom="20dp"
                 app:cardCornerRadius="8dp"
                 app:cardElevation="2dp"
                 android:clickable="true"
@@ -326,6 +326,43 @@
                 </LinearLayout>
 
             </com.google.android.material.card.MaterialCardView>
+
+            <!-- Doctor Recommendations Section -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Rekomendasi Dokter Menunggu Persetujuan"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="12dp" />
+
+            <!-- Container for Doctor Recommendations -->
+            <LinearLayout
+                android:id="@+id/container_recommendations"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <!-- Doctor recommendation cards will be added here dynamically -->
+
+            </LinearLayout>
+
+            <!-- Empty State for No Recommendations -->
+            <TextView
+                android:id="@+id/tv_no_recommendations"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Tidak ada rekomendasi yang menunggu persetujuan"
+                android:textSize="14sp"
+                android:textColor="@color/text_secondary"
+                android:gravity="center"
+                android:padding="20dp"
+                android:visibility="gone" />
+
+            <!-- Bottom padding for scrolling -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="80dp" />
 
         </LinearLayout>
 

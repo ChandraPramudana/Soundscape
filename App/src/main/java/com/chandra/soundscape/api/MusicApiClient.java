@@ -1110,6 +1110,134 @@ public class MusicApiClient {
         });
     }
 
+    // Get pending doctor recommendations
+    public void getPendingDoctorRecommendations(ApiCallback<List<MusicTrack>> callback) {
+        Log.d(TAG, "=== GETTING PENDING DOCTOR RECOMMENDATIONS ===");
+
+        // Query for pending doctor recommendations
+        apiService.getAllMusic("*", "eq.true", "created_at.desc").enqueue(new Callback<List<MusicTrack>>() {
+            @Override
+            public void onResponse(Call<List<MusicTrack>> call, Response<List<MusicTrack>> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    List<MusicTrack> allMusic = response.body();
+                    List<MusicTrack> pendingRecommendations = new ArrayList<>();
+
+                    // Filter for pending doctor recommendations
+                    for (MusicTrack music : allMusic) {
+                        if (music.isUploadedByDoctor() &&
+                                "pending".equals(music.getApprovalStatus())) {
+                            pendingRecommendations.add(music);
+                        }
+                    }
+
+                    Log.d(TAG, "Found " + pendingRecommendations.size() + " pending recommendations");
+                    callback.onSuccess(pendingRecommendations);
+                } else {
+                    callback.onError("Failed to get recommendations: " + response.code());
+                }
+            }
+
+            @Override
+            public void onFailure(Call<List<MusicTrack>> call, Throwable t) {
+                callback.onError("Network error: " + t.getMessage());
+            }
+        });
+    }
+
+    // Get doctor's own recommendations
+    public void getDoctorRecommendations(String doctorId, ApiCallback<List<MusicTrack>> callback) {
+        Log.d(TAG, "=== GETTING DOCTOR RECOMMENDATIONS ===");
+        Log.d(TAG, "Doctor ID: " + doctorId);
+
+        apiService.getAllMusic("*", "eq.true", "created_at.desc").enqueue(new Callback<List<MusicTrack>>() {
+            @Override
+            public void onResponse(Call<List<MusicTrack>> call, Response<List<MusicTrack>> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    List<MusicTrack> allMusic = response.body();
+                    List<MusicTrack> doctorMusic = new ArrayList<>();
+
+                    // Filter for this doctor's recommendations
+                    for (MusicTrack music : allMusic) {
+                        if (doctorId.equals(music.getDoctorId()) ||
+                                doctorId.equals(music.getCreatedBy())) {
+                            doctorMusic.add(music);
+                        }
+                    }
+
+                    Log.d(TAG, "Found " + doctorMusic.size() + " recommendations for doctor");
+                    callback.onSuccess(doctorMusic);
+                } else {
+                    callback.onError("Failed to get recommendations: " + response.code());
+                }
+            }
+
+            @Override
+            public void onFailure(Call<List<MusicTrack>> call, Throwable t) {
+                callback.onError("Network error: " + t.getMessage());
+            }
+        });
+    }
+
+    // Approve recommendation
+    public void approveRecommendation(String musicId, String adminId, ApiCallback<Void> callback) {
+        Log.d(TAG, "=== APPROVING RECOMMENDATION ===");
+        Log.d(TAG, "Music ID: " + musicId);
+        Log.d(TAG, "Admin ID: " + adminId);
+
+        // Create update object
+        MusicTrack update = new MusicTrack();
+        update.setApprovalStatus("approved");
+        update.setApprovedBy(adminId);
+
+        apiService.updateMusic("eq." + musicId, update).enqueue(new Callback<ResponseBody>() {
+            @Override
+            public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
+                if (response.isSuccessful()) {
+                    Log.d(TAG, "✅ Recommendation approved successfully");
+                    callback.onSuccess(null);
+                } else {
+                    callback.onError("Failed to approve: " + response.code());
+                }
+            }
+
+            @Override
+            public void onFailure(Call<ResponseBody> call, Throwable t) {
+                callback.onError("Network error: " + t.getMessage());
+            }
+        });
+    }
+
+    // Reject recommendation
+    public void rejectRecommendation(String musicId, String adminId, String reason, ApiCallback<Void> callback) {
+        Log.d(TAG, "=== REJECTING RECOMMENDATION ===");
+        Log.d(TAG, "Music ID: " + musicId);
+        Log.d(TAG, "Admin ID: " + adminId);
+        Log.d(TAG, "Reason: " + reason);
+
+        // Create update object
+        MusicTrack update = new MusicTrack();
+        update.setApprovalStatus("rejected");
+        update.setApprovedBy(adminId);
+        update.setRejectionReason(reason);
+
+        apiService.updateMusic("eq." + musicId, update).enqueue(new Callback<ResponseBody>() {
+            @Override
+            public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
+                if (response.isSuccessful()) {
+                    Log.d(TAG, "✅ Recommendation rejected successfully");
+                    callback.onSuccess(null);
+                } else {
+                    callback.onError("Failed to reject: " + response.code());
+                }
+            }
+
+            @Override
+            public void onFailure(Call<ResponseBody> call, Throwable t) {
+                callback.onError("Network error: " + t.getMessage());
+            }
+        });
+    }
+
     // Add this class if you want more detailed stats
     public static class DetailedStatistics extends Statistics {
         private int playsToday;

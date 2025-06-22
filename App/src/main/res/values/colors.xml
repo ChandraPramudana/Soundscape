@@ -55,4 +55,6 @@
     <color name="badge_default_bg">#F5F5F5</color>
     <color name="badge_default_text">#757575</color>
 
+    <color name="status_pending">#FFF8E1</color>
+
 </resources>

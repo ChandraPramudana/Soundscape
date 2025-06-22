@@ -55,7 +55,7 @@ public class RegisterActivity extends AppCompatActivity {
     }
 
     private void setupSpinner() {
-        String[] roles = {"Pilih Role", "Listener", "Admin"};
+        String[] roles = {"Pilih Role", "Listener", "Admin", "Dokter"};
         ArrayAdapter<String> adapter = new ArrayAdapter<>(this,
                 android.R.layout.simple_spinner_item, roles);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
